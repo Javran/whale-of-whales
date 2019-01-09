@@ -1,6 +1,7 @@
 {-# LANGUAGE
     OverloadedStrings
   , NamedFieldPuns
+  , RecordWildCards
   #-}
 module Javran.Wow.Main
   ( main
@@ -13,8 +14,14 @@ import System.Environment
 import Data.String
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Exception
+import Control.Concurrent
+import Data.Functor
 
+import Javran.Wow.Env
+import Javran.Wow.Worker
 import Javran.Wow.Types
+
 
 {-
   ENV:
@@ -25,7 +32,7 @@ import Javran.Wow.Types
   - (TODO) STATE_FILE=<filename>
   - (TODO) ERR_FILE=<filename>
  -}
-
+{-
 getToken :: IO Token
 getToken = Token . fromString <$> getEnv "BOT_TOKEN"
 
@@ -43,13 +50,49 @@ handleUpdateM Update {message = Just msg} = sendMessageM req
         , message_reply_to_message_id = Just message_id
         , message_reply_markup = Nothing
         }
+-}
+botWorker :: WEnv -> IO ()
+botWorker wenv@WEnv{..} =
+    -- outter forever for continuing from critical errors
+    forever $ catch run errHandler
+  where
+    run :: IO ()
+    run = do
+      mgr <- newManager tlsManagerSettings
+      initState <- loadState
+      -- inner forever for update handling
+      void $ runWowM wenv initState mgr $ forever $ do
+        WState {..} <- getWState
+        mapM_ handleUpdate =<< liftTC (do
+            void deleteWebhookM
+            let req = GetUpdatesRequest
+                        { updates_offset = succ <$> lastUpdate
+                        , updates_limit = Nothing
+                        , updates_timeout = Just pullTimeout
+                        , updates_allowed_updates = Nothing
+                        }
+            Response {..} <- getUpdatesM req
+            pure result)
+        handleKick
+        saveState
+
+    errHandler :: SomeException -> IO ()
+    errHandler e =
+      appendLogTo errFile $
+        "Exception caught: " ++ displayException e
 
 main :: IO ()
 main = do
+  we <- getWEnvFromSys
+  void $ forkIO (botWorker we)
+
+  {-
   mgr <- newManager tlsManagerSettings
+  
+  
   tok <- getToken
   _ <- runTelegramClient tok mgr $ do
-    -- make sure that we are NOT using webhook
+
     _ <- deleteWebhookM
     let req = GetUpdatesRequest Nothing Nothing (Just 5) Nothing
     Response {result = resps, parameters = ps} <- getUpdatesM req
@@ -60,3 +103,4 @@ main = do
         print resp
       handleUpdateM resp
   pure ()
+-}
