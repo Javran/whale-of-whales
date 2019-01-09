@@ -19,17 +19,18 @@ import Control.Monad.State
 import Web.Telegram.API.Bot
 import Servant.Client
 import Network.HTTP.Client (Manager)
+import qualified Data.Text as T
 
 data PendingKick = PendingKick
-  { channelId :: Int
+  { channelId :: T.Text
   , userId :: Int
-  , timestamp :: Int
-  }
+  , timestamp :: UTCTime
+  } deriving (Read, Show)
 
 data WState = WState
   { lastUpdate :: Maybe Int
   , pendingKicks :: [PendingKick]
-  }
+  } deriving (Read, Show)
 
 data WEnv = WEnv
   { botToken :: Token
@@ -67,8 +68,8 @@ logM msg = asksWEnv errFile >>= \fp -> liftIO (appendLogTo fp msg)
 
 appendLogTo :: FilePath -> String -> IO ()
 appendLogTo logPath msg = do
-  t <- getZonedTime
-  let dateStr = formatTime defaultTimeLocale "%_Y-%m-%d" t
-      timeStr = formatTime defaultTimeLocale "%T" t
-      header = "[" <> dateStr <> " " <> timeStr <> "]"
-  appendFile logPath (header <> " " <> msg <> "\n")
+    t <- getZonedTime
+    let dateStr = formatTime defaultTimeLocale "%_Y-%m-%d" t
+        timeStr = formatTime defaultTimeLocale "%T" t
+        header = "[" <> dateStr <> " " <> timeStr <> "]"
+    appendFile logPath (header <> " " <> msg <> "\n")
