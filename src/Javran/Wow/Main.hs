@@ -2,7 +2,7 @@
     OverloadedStrings
   , NamedFieldPuns
   #-}
-module Javran.WoW.Main
+module Javran.Wow.Main
   ( main
   ) where
 
@@ -14,16 +14,7 @@ import Data.String
 import Control.Monad
 import Control.Monad.IO.Class
 
-data PendingKick =
-  { channelId :: Int
-  , userId :: Int
-  , timestamp :: Int
-  }
-
-data WState = WS
-  { lastUpdate :: Maybe Int
-  , pendingKicks :: [PendingKick]
-  }
+import Javran.Wow.Types
 
 {-
   ENV:
