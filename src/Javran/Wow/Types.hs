@@ -25,10 +25,12 @@ data PendingKick = PendingKick
   { channelId :: T.Text
   , userId :: Int
   , timestamp :: UTCTime
+  -- , nonce :: T.Text - could be UUID, as long as option is prefixed with that nonce, we are good to cancel kicking.
   } deriving (Read, Show)
 
 data WState = WState
   { lastUpdate :: Maybe Int
+    -- TODO: key by user (new join event shouldn't update existing records)
   , pendingKicks :: [PendingKick]
   } deriving (Read, Show)
 
