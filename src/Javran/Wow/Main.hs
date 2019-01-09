@@ -45,7 +45,7 @@ botWorker wenv@WEnv{..} =
                         }
             Response {..} <- getUpdatesM req
             pure result)
-        handleKick
+        handleKicks
         saveState
 
     errHandler :: SomeException -> IO ()
