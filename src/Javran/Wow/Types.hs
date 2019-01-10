@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, ExplicitForAll, TypeApplications, LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables, ExplicitForAll, TypeApplications, LambdaCase, NamedFieldPuns #-}
 module Javran.Wow.Types
   ( PendingKick(..)
   , WState(..)
@@ -12,6 +12,7 @@ module Javran.Wow.Types
   , logM
   , appendLogTo
   , tryWithTag
+  , genNextM
   ) where
 
 import Data.Int
@@ -26,10 +27,10 @@ import qualified Control.Monad.Catch as MCatch
 import System.Random
 
 data PendingKick = PendingKick
-  { channelId :: T.Text
+  { groupId :: T.Text
   , userId :: Int
   , timestamp :: UTCTime
-  -- , nonce :: T.Text - could be UUID, as long as option is prefixed with that nonce, we are good to cancel kicking.
+  , kickMeta :: T.Text
   } deriving (Read, Show)
 
 data WState = WState
@@ -81,6 +82,13 @@ tryWithTag tag m =
       logM $ "[" ++ tag ++ "] " ++ MCatch.displayException e
       pure Nothing
     Right r -> pure (Just r)
+
+genNextM :: Random v => WowM v
+genNextM = do
+    WState {rGen} <- getWState
+    let (r, rGen') = random rGen
+    modifyWState (\s -> s{rGen = rGen'})
+    pure r
 
 logM :: String -> WowM ()
 logM msg = asksWEnv errFile >>= \fp -> liftIO (appendLogTo fp msg)

@@ -37,4 +37,5 @@ executable wow
               , text
               , exceptions
               , random
+              , uuid
   default-language: Haskell2010
