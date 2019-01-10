@@ -8,3 +8,5 @@ These variables need to be present in the enviroment:
 - `ERR_FILE` a file path for outputing error messages (if any)
 - `STATE_FILE` a file path for storing bot state (don't have to actually present upon startup)
 - `WATCHING_GROUPS` a comma separated list of chat ids that this bot should watch
+
+The `wowz-sample` provides a sample launcher in which you can specify all these variables.
