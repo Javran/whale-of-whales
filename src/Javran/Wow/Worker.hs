@@ -15,6 +15,7 @@ import Web.Telegram.API.Bot
 import Data.Time
 import Data.Time.Clock
 import Data.List
+import System.Random
 
 import Javran.Wow.Types
 
@@ -110,7 +111,7 @@ loadState fp =
     errHandler :: SomeException -> IO WState
     errHandler e = do
       hPutStrLn stderr $ "Exception caught: " ++ displayException e
-      pure (WState Nothing [])
+      WState Nothing [] <$> newStdGen
 
 saveState :: WowM ()
 saveState = do

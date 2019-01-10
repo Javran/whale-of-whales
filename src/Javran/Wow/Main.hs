@@ -25,6 +25,7 @@ botWorker wenv@WEnv{..} =
   where
     run :: IO ()
     run = do
+      putStrLn "bot started"
       mgr <- newManager tlsManagerSettings
       initState <- loadState stateFile
       -- inner forever for update handling

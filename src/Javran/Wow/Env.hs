@@ -27,7 +27,7 @@ getWEnvFromSys = do
 parseChatIds :: String -> [Int64]
 parseChatIds raw = case readP_to_S parser raw of
     [(xs, [])] -> xs
-    _ -> error "error when parsing WATCHING_GROUPS"
+    _ -> error "error while parsing WATCHING_GROUPS"
   where
     rInt64 :: ReadP Int64
     rInt64 = readS_to_P reads

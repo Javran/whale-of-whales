@@ -23,6 +23,7 @@ import Servant.Client
 import Network.HTTP.Client (Manager)
 import qualified Data.Text as T
 import qualified Control.Monad.Catch as MCatch
+import System.Random
 
 data PendingKick = PendingKick
   { channelId :: T.Text
@@ -35,6 +36,7 @@ data WState = WState
   { lastUpdate :: Maybe Int
     -- TODO: key by user (new join event shouldn't update existing records)
   , pendingKicks :: [PendingKick]
+  , rGen :: StdGen
   } deriving (Read, Show)
 
 data WEnv = WEnv
