@@ -7,10 +7,14 @@ module Javran.Wow.Env
   ) where
 
 import System.Environment
+import Text.ParserCombinators.ReadP
 import Data.String
+import Data.Int
 import Web.Telegram.API.Bot
 
 import Javran.Wow.Types
+
+-- TODO: WATCHING_GROUPS is not yet implemented.
 
 getWEnvFromSys :: IO WEnv
 getWEnvFromSys = do
@@ -19,4 +23,21 @@ getWEnvFromSys = do
     kickTimeout <- read @Int <$> getEnv "KICK_TIMEOUT"
     errFile <- getEnv "ERR_FILE"
     stateFile <- getEnv "STATE_FILE"
+    watchingGroups <- parseChatIds <$> getEnv "WATCHING_GROUPS"
+    putStrLn $ "watching group is: " ++ show watchingGroups
     pure (WEnv {..})
+
+parseChatIds :: String -> [Int64]
+parseChatIds raw = case readP_to_S parser raw of
+    [(xs, [])] -> xs
+    _ -> error "error when parsing WATCHING_GROUPS"
+  where
+    rInt64 :: ReadP Int64
+    rInt64 = readS_to_P reads
+    
+    parser :: ReadP [Int64]
+    parser =
+      skipSpaces *>
+      ((rInt64 <* skipSpaces) `sepBy` (char ',' <* skipSpaces)) <*
+      optional (char ',' <* skipSpaces) <*
+      eof

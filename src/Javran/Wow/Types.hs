@@ -13,6 +13,7 @@ module Javran.Wow.Types
   , appendLogTo
   ) where
 
+import Data.Int
 import Data.Time
 import Control.Monad.Reader
 import Control.Monad.State
@@ -40,6 +41,7 @@ data WEnv = WEnv
   , kickTimeout :: Int
   , errFile :: FilePath
   , stateFile :: FilePath
+  , watchingGroups :: [Int64]
   }
 
 type WowM a = ReaderT WEnv (StateT WState ClientM) a
