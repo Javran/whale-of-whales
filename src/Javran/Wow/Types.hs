@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, ExplicitForAll #-}
+{-# LANGUAGE ScopedTypeVariables, ExplicitForAll, TypeApplications, LambdaCase #-}
 module Javran.Wow.Types
   ( PendingKick(..)
   , WState(..)
@@ -11,6 +11,7 @@ module Javran.Wow.Types
   , runWowM
   , logM
   , appendLogTo
+  , tryWithTag
   ) where
 
 import Data.Int
@@ -21,6 +22,7 @@ import Web.Telegram.API.Bot
 import Servant.Client
 import Network.HTTP.Client (Manager)
 import qualified Data.Text as T
+import qualified Control.Monad.Catch as MCatch
 
 data PendingKick = PendingKick
   { channelId :: T.Text
@@ -66,6 +68,17 @@ runWowM we@WEnv {botToken = tok} ws mgr act =
   where
     mTC :: TelegramClient a
     mTC = ReaderT (const (evalStateT (runReaderT act we) ws))
+
+-- for not well explained reason, this is not working -
+-- the flow of computation just terminates and not a single catch function
+-- does their job, which is flipping great
+tryWithTag :: String -> WowM a -> WowM (Maybe a)
+tryWithTag tag m =
+  MCatch.try @_ @ServantError m >>= \case
+    Left e -> do
+      logM $ "[" ++ tag ++ "] " ++ MCatch.displayException e
+      pure Nothing
+    Right r -> pure (Just r)
 
 logM :: String -> WowM ()
 logM msg = asksWEnv errFile >>= \fp -> liftIO (appendLogTo fp msg)

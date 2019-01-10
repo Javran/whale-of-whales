@@ -10,14 +10,9 @@ module Javran.Wow.Main
 import Network.HTTP.Client (newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Web.Telegram.API.Bot
-import System.Environment
-import Data.String
 import Control.Monad
-import Control.Monad.IO.Class
 import Control.Exception
 import Control.Concurrent
-import Data.Functor
-import System.IO
 
 import Javran.Wow.Env
 import Javran.Wow.Worker

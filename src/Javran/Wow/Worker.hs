@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, StandaloneDeriving, OverloadedStrings, MultiWayIf #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns, StandaloneDeriving, OverloadedStrings, MultiWayIf, ScopedTypeVariables #-}
 module Javran.Wow.Worker
   ( handleUpdate
   , handleKicks
@@ -9,7 +9,8 @@ module Javran.Wow.Worker
 import System.IO
 import Control.Monad.IO.Class
 import Data.String
-import Control.Exception
+-- import Control.Exception
+import Control.Monad.Catch
 import Web.Telegram.API.Bot
 import Data.Time
 import Data.Time.Clock
@@ -29,6 +30,7 @@ bumpLastSeen Update{..} = do
 handleUpdate :: Update -> WowM ()
 handleUpdate upd@Update{..} = do
     bumpLastSeen upd
+    saveState
     case upd of
       Update
         { callback_query = Just cq@CallbackQuery {..}

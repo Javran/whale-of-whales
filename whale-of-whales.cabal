@@ -35,4 +35,5 @@ executable wow
               , mtl
               , servant-client
               , text
+              , exceptions
   default-language: Haskell2010

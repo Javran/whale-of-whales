@@ -14,8 +14,6 @@ import Web.Telegram.API.Bot
 
 import Javran.Wow.Types
 
--- TODO: WATCHING_GROUPS is not yet implemented.
-
 getWEnvFromSys :: IO WEnv
 getWEnvFromSys = do
     botToken <- Token . fromString <$> getEnv "BOT_TOKEN"
@@ -24,7 +22,6 @@ getWEnvFromSys = do
     errFile <- getEnv "ERR_FILE"
     stateFile <- getEnv "STATE_FILE"
     watchingGroups <- parseChatIds <$> getEnv "WATCHING_GROUPS"
-    putStrLn $ "watching group is: " ++ show watchingGroups
     pure (WEnv {..})
 
 parseChatIds :: String -> [Int64]
