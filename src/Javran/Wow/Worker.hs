@@ -76,7 +76,7 @@ handleUpdate upd@Update{..} = do
                          , message_reply_to_message_id = Nothing
                          , message_reply_markup = Nothing
                          }
-               _ <- liftTC $ sendMessageM req
+               _ <- tryWithTag "zz" $ liftTC $ sendMessageM req { message_text = "" }
                pure ()
              _ -> pure ()
            modifyWState (\s -> s {pendingKicks = remainingKicks})
@@ -84,7 +84,7 @@ handleUpdate upd@Update{..} = do
         { message =
             Just Message
                  { chat = Chat {chat_type = ct, chat_id = ci}
-                 , new_chat_members = Just users@(_:_)
+                 , new_chat_members = Just users
                  , message_id
                  }
         }
@@ -94,6 +94,7 @@ handleUpdate upd@Update{..} = do
         liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
         pure ()
   where
+    processNewMembers _ _ [] = pure ()
     processNewMembers msgId chatId users = do
       cbData <- UUID.toText <$> genNextM
       -- send message
