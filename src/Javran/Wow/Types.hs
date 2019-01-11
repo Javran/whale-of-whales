@@ -19,11 +19,12 @@ import Data.Int
 import Data.Time
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Monad.Except
 import Web.Telegram.API.Bot
 import Servant.Client
 import Network.HTTP.Client (Manager)
 import qualified Data.Text as T
-import qualified Control.Monad.Catch as MCatch
+-- import qualified Control.Monad.Catch as MCatch
 import System.Random
 
 data PendingKick = PendingKick
@@ -76,12 +77,9 @@ runWowM we@WEnv {botToken = tok} ws mgr act =
 -- the flow of computation just terminates and not a single catch function
 -- does their job, which is flipping great
 tryWithTag :: String -> WowM a -> WowM (Maybe a)
-tryWithTag tag m =
-  MCatch.try @_ @ServantError m >>= \case
-    Left e -> do
-      logM $ "[" ++ tag ++ "] " ++ MCatch.displayException e
-      pure Nothing
-    Right r -> pure (Just r)
+tryWithTag tag m = catchError @ServantError (Just <$> m) $ \e -> do
+    logM $ "[" ++ tag ++ "] " ++ show e
+    pure Nothing
 
 genNextM :: Random v => WowM v
 genNextM = do
