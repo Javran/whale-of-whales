@@ -76,7 +76,7 @@ handleUpdate upd@Update{..} = do
                          , message_reply_to_message_id = Nothing
                          , message_reply_markup = Nothing
                          }
-               _ <- tryWithTag "zz" $ liftTC $ sendMessageM req { message_text = "" }
+               _ <- liftTC $ sendMessageM req 
                pure ()
              _ -> pure ()
            modifyWState (\s -> s {pendingKicks = remainingKicks})
@@ -137,7 +137,7 @@ handleKicks = do
       timeExceeded PendingKick{..} = floor timeDiff > kickTimeout
         where
           timeDiff = curTime `diffUTCTime` timestamp
-      kickUser PendingKick{..} = liftTC $ do
+      kickUser PendingKick{..} = tryWithTag "KickAttempt" $ liftTC $ do
         -- kick & unban, by doing so users are allowed to re-join
         _ <- kickChatMemberM groupId userId
         _ <- unbanChatMemberM groupId userId
