@@ -73,9 +73,14 @@ runWowM we@WEnv {botToken = tok} ws mgr act =
     mTC :: TelegramClient a
     mTC = ReaderT (const (evalStateT (runReaderT act we) ws))
 
--- for not well explained reason, this is not working -
--- the flow of computation just terminates and not a single catch function
--- does their job, which is flipping great
+
+{-
+  note that we do really want to capture "trapped errors",
+  which means making use of "MonadError ServantError m" instance
+  rather than using "MatchCatch", which is meant for "untrapped errors",
+  or in other words, those errors that isn't expected by,
+  or is not responsible to be handled by ClientM monad.
+ -}
 tryWithTag :: String -> WowM a -> WowM (Maybe a)
 tryWithTag tag m = catchError @ServantError (Just <$> m) $ \e -> do
     logM $ "[" ++ tag ++ "] " ++ show e
