@@ -1,4 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables, ExplicitForAll, TypeApplications, LambdaCase, NamedFieldPuns #-}
+{-# LANGUAGE
+    ScopedTypeVariables
+  , ExplicitForAll
+  , TypeApplications
+  , NamedFieldPuns
+  , StandaloneDeriving
+  #-}
 module Javran.Wow.Types
   ( PendingKick(..)
   , WState(..)
@@ -26,6 +32,9 @@ import Network.HTTP.Client (Manager)
 import qualified Data.Text as T
 -- import qualified Control.Monad.Catch as MCatch
 import System.Random
+
+-- TODO: move to Types when done
+deriving instance Eq ChatType
 
 data PendingKick = PendingKick
   { groupId :: T.Text

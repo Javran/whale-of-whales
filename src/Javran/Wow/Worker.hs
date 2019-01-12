@@ -1,4 +1,11 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, StandaloneDeriving, OverloadedStrings, MultiWayIf, ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE
+    RecordWildCards
+  , NamedFieldPuns
+  , OverloadedStrings
+  , MultiWayIf
+  , ScopedTypeVariables
+  , TypeApplications
+  #-}
 module Javran.Wow.Worker
   ( handleUpdate
   , handleKicks
@@ -10,22 +17,16 @@ import System.IO
 import Control.Monad.IO.Class
 import Data.String
 import Data.Int
--- import Control.Exception
 import Control.Monad.Catch
 import Web.Telegram.API.Bot
 import Data.Time
-import Data.Time.Clock
 import Data.List
 import System.Random
 import qualified Data.UUID as UUID
 import qualified Data.Text as T
 
 import Javran.Wow.Types
-import Control.Monad
-import Data.String
 
--- TODO: move to Types when done
-deriving instance Eq ChatType
 
 bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do
@@ -83,8 +84,8 @@ handleUpdate upd@Update{..} = do
       Update
         { message =
             Just Message
-                 { chat = Chat {chat_type = ct, chat_id = ci}
-                 , new_chat_members = Just users
+                 { chat = Chat {chat_type = ct, chat_id = ci} 
+                , new_chat_members = Just users
                  , message_id
                  }
         }
