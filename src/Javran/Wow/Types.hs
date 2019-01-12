@@ -5,6 +5,7 @@
   , NamedFieldPuns
   , StandaloneDeriving
   #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Javran.Wow.Types
   ( PendingKick(..)
   , WState(..)
