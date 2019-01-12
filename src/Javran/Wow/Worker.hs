@@ -26,7 +26,8 @@ import qualified Data.UUID as UUID
 import qualified Data.Text as T
 
 import Javran.Wow.Types
-
+import Javran.Wow.Default ()
+import Data.Default
 
 bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do
@@ -47,13 +48,7 @@ handleUpdate upd@Update{..} = do
                         }
         } -> do
            WState {pendingKicks = pks} <- getWState
-           let aReq = AnswerCallbackQueryRequest
-                      { cq_callback_query_id = cq_id
-                      , cq_text = Nothing
-                      , cq_show_alert = Nothing
-                      , cq_url = Nothing
-                      , cq_cache_time = Nothing
-                      }
+           let aReq = def { cq_callback_query_id = cq_id }
            _ <- liftTC $ answerCallbackQueryM aReq
            let (rmKicks, remainingKicks) = partition isValid pks
                isValid PendingKick{..} =
@@ -68,15 +63,9 @@ handleUpdate upd@Update{..} = do
                    welcomeMsg = case user_username of
                      Just u -> "欢迎" <> u <> "!"
                      Nothing -> "欢迎" <> fromString (show user_id) <> "!"
-                   req = SendMessageRequest
-                         { message_chat_id = ChatId cId
-                         , message_text = welcomeMsg
-                         , message_parse_mode = Nothing
-                         , message_disable_web_page_preview = Nothing
-                         , message_disable_notification = Nothing
-                         , message_reply_to_message_id = Nothing
-                         , message_reply_markup = Nothing
-                         }
+                   req = def { message_chat_id = ChatId cId
+                             , message_text = welcomeMsg
+                             } 
                _ <- liftTC $ sendMessageM req 
                pure ()
              _ -> pure ()
@@ -99,21 +88,13 @@ handleUpdate upd@Update{..} = do
     processNewMembers msgId chatId users = do
       cbData <- UUID.toText <$> genNextM
       -- send message
-      let mk txt payload = InlineKeyboardButton
+      let mk txt payload = def
                  { ikb_text = txt
-                 , ikb_url = Nothing
                  , ikb_callback_data = Just $ cbData <> "|" <> payload
-                 , ikb_switch_inline_query = Nothing
-                 , ikb_callback_game = Nothing
-                 , ikb_switch_inline_query_current_chat = Nothing
-                 , ikb_pay = Nothing
                  } 
-          req = SendMessageRequest
+          req = def
                 { message_chat_id = ChatId chatId
                 , message_text = "是萌妹子吗?"
-                , message_parse_mode = Nothing
-                , message_disable_web_page_preview = Nothing
-                , message_disable_notification = Nothing
                 , message_reply_to_message_id = Just msgId
                 , message_reply_markup = Just (ReplyInlineKeyboardMarkup
                                                [ [mk "是" "y"]
