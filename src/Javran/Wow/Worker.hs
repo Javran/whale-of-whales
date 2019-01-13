@@ -26,8 +26,9 @@ import qualified Data.UUID as UUID
 import qualified Data.Text as T
 
 import Javran.Wow.Types
+import Javran.Wow.Base
 import Javran.Wow.Default ()
-import Data.Default
+import Data.Default.Class
 
 bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do

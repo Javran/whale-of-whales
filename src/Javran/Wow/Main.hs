@@ -17,6 +17,7 @@ import Control.Concurrent
 import Javran.Wow.Env
 import Javran.Wow.Worker
 import Javran.Wow.Types
+import Javran.Wow.Base
 
 botWorker :: WEnv -> IO ()
 botWorker wenv@WEnv{..} =
