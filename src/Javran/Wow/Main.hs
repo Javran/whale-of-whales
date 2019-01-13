@@ -39,7 +39,7 @@ botWorker wenv@WEnv{..} = fix $ \r errCount ->
         _ <- tryWithTag "DelWebhook" $ liftTC deleteWebhookM
         -- forever for update handling        
         forever $ do
-          (_oldSt@WPState {..}, _) <- get
+          (oldSt@WPState {..}, _) <- get
           {-
             INVARIANT:
               - handleUpdate should be able to capture all ServantError inside of it.
@@ -53,10 +53,8 @@ botWorker wenv@WEnv{..} = fix $ \r errCount ->
             Response {..} <- getUpdatesM req
             pure result)
           handleKicks
-          -- TODO: diff-then-write
-          -- newSt <- get
-          -- when (oldSt /= newSt) saveState
-          saveState
+          (newSt, _) <- get
+          when (oldSt /= newSt) saveState
 
     errHandler :: SomeException -> IO ()
     errHandler e =

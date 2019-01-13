@@ -31,14 +31,14 @@ data PendingKick = PendingKick
   , userId :: Int
   , timestamp :: UTCTime
   , kickMeta :: T.Text
-  } deriving (Read, Show)
+  } deriving (Read, Show, Eq)
 
 -- "P" for persistent
 data WPState = WPState
   { lastUpdate :: Maybe Int
     -- TODO: key by user (new join event shouldn't update existing records)
   , pendingKicks :: [PendingKick]
-  } deriving (Read, Show, Generic)
+  } deriving (Read, Show, Eq, Generic)
 
 instance Default WPState
 
