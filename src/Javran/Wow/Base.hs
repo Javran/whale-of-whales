@@ -21,6 +21,7 @@ import Data.Time
 import System.Random
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Monad.RWS
 import Control.Monad.Except
 import Web.Telegram.API.Bot
 import Servant.Client
@@ -31,23 +32,23 @@ import Javran.Wow.Types
 liftTC :: TelegramClient a -> WowM a
 liftTC m = do
   tok <- asks botToken
-  lift (lift (runReaderT m tok))
+  lift (runReaderT m tok)
 
 asksWEnv :: (WEnv -> r) -> WowM r
 asksWEnv = asks
 
 modifyWState :: (WState -> WState) -> WowM ()
-modifyWState = lift . modify
+modifyWState = modify
 
 getWState :: WowM WState
-getWState = lift get
+getWState = get
 
 runWowM :: forall a. WEnv -> WState -> Manager -> WowM a -> IO (Either ServantError a)
 runWowM we@WEnv {botToken = tok} ws mgr act =
     runClient mTC tok mgr
   where
     mTC :: TelegramClient a
-    mTC = ReaderT (const (evalStateT (runReaderT act we) ws))
+    mTC = ReaderT (pure (fst <$> evalRWST act we ws))
 
 {-
   note that we do really want to capture "trapped errors",

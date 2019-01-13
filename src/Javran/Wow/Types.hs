@@ -16,12 +16,12 @@ import Data.Int
 import Data.Time
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Monad.RWS
 import Web.Telegram.API.Bot
 import Servant.Client
 import qualified Data.Text as T
 import System.Random
 
--- TODO: move to Types when done
 deriving instance Eq ChatType
 
 data PendingKick = PendingKick
@@ -47,5 +47,7 @@ data WEnv = WEnv
   , watchingGroups :: [Int64]
   }
 
-type WowM a = ReaderT WEnv (StateT WState ClientM) a
+type WowM a = RWST WEnv () WState ClientM a
+
+  -- ReaderT WEnv (StateT WState ClientM) a
 
