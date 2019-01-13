@@ -11,8 +11,10 @@ import Network.HTTP.Client (newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Web.Telegram.API.Bot
 import Control.Monad
+import Control.Monad.RWS
 import Control.Exception
 import Control.Concurrent
+import Data.Default.Class
 
 import Javran.Wow.Env
 import Javran.Wow.Worker
@@ -31,14 +33,12 @@ botWorker wenv@WEnv{..} =
       initState <- loadState stateFile
       -- inner forever for update handling
       void $ runWowM wenv initState mgr $ forever $ do
-        WState {..} <- getWState
+        WState {..} <- get
         mapM_ handleUpdate =<< liftTC (do
             void deleteWebhookM
-            let req = GetUpdatesRequest
+            let req = def
                         { updates_offset = succ <$> lastUpdate
-                        , updates_limit = Nothing
                         , updates_timeout = Just pullTimeout
-                        , updates_allowed_updates = Nothing
                         }
             Response {..} <- getUpdatesM req
             pure result)
