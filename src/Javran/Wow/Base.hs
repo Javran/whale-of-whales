@@ -98,5 +98,5 @@ loadState fp =
 saveState :: WowM ()
 saveState = do
     WEnv {..} <- ask
-    st <- get
+    (st, _) <- get
     liftIO $ writeFile stateFile (show st)
