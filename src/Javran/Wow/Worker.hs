@@ -5,7 +5,6 @@
   , MultiWayIf
   , ScopedTypeVariables
   , TypeApplications
-  , TupleSections
   #-}
 module Javran.Wow.Worker
   ( handleUpdate
@@ -14,16 +13,13 @@ module Javran.Wow.Worker
   , saveState
   ) where
 
-import System.IO
 import Control.Monad.IO.Class
 import Data.String
 import Data.Int
 import Control.Monad.RWS
-import Control.Monad.Catch
 import Web.Telegram.API.Bot
 import Data.Time
 import Data.List
-import System.Random
 import qualified Data.UUID as UUID
 import qualified Data.Text as T
 
@@ -42,7 +38,6 @@ bumpLastSeen Update{..} = do
 handleUpdate :: Update -> WowM ()
 handleUpdate upd@Update{..} = do
     bumpLastSeen upd
-    saveState
     case upd of
       Update
         { callback_query = Just
@@ -131,24 +126,3 @@ handleKicks = do
         
   mapM_ kickUser kickingList
   modify (\(s,rg) -> (s{pendingKicks = stillPending}, rg))
-
-loadState :: FilePath -> IO WState
-loadState fp =
-    catch load errHandler
-  where
-    load :: IO WState
-    load = do
-      ps <- read <$> readFile fp
-      g <- newStdGen
-      pure (ps,g)
-    
-    errHandler :: SomeException -> IO WState
-    errHandler e = do
-      hPutStrLn stderr $ "Exception caught: " ++ displayException e
-      (def,) <$> newStdGen
-
-saveState :: WowM ()
-saveState = do
-    WEnv {..} <- ask
-    st <- get
-    liftIO $ writeFile stateFile (show st)

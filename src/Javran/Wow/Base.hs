@@ -3,6 +3,8 @@
   , TypeApplications
   , NamedFieldPuns
   , ScopedTypeVariables
+  , TupleSections
+  , RecordWildCards
   #-}
 module Javran.Wow.Base
   ( liftTC
@@ -11,6 +13,8 @@ module Javran.Wow.Base
   , appendLogTo
   , tryWithTag
   , genNextM
+  , loadState
+  , saveState
   ) where
 
 import Data.Time
@@ -21,7 +25,11 @@ import Control.Monad.RWS
 import Control.Monad.Except
 import Web.Telegram.API.Bot
 import Servant.Client
+import Control.Exception
+import System.IO
+import System.IO.Error
 import Network.HTTP.Client (Manager)
+import Data.Default.Class
 
 import Javran.Wow.Types
 
@@ -66,3 +74,29 @@ appendLogTo logPath msg = do
         timeStr = formatTime defaultTimeLocale "%T" t
         header = "[" <> dateStr <> " " <> timeStr <> "]"
     appendFile logPath (header <> " " <> msg <> "\n")
+
+loadState :: FilePath -> IO WState
+loadState fp =
+    catch load errHandler
+  where
+    load :: IO WState
+    load = do
+      ps <- read <$> readFile fp
+      g <- newStdGen
+      pure (ps,g)
+    
+    errHandler :: SomeException -> IO WState
+    errHandler e
+      | Just ioe <- fromException @IOException e
+      , isDoesNotExistError ioe = do
+          hPutStrLn stderr "State file does not exist, assuming fresh start."
+          (def,) <$> newStdGen
+      | otherwise = do
+          hPutStrLn stderr $ "Exception caught: " ++ displayException e
+          (def,) <$> newStdGen
+
+saveState :: WowM ()
+saveState = do
+    WEnv {..} <- ask
+    st <- get
+    liftIO $ writeFile stateFile (show st)
