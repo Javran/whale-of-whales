@@ -39,6 +39,6 @@ executable wow
               , servant-client
               , text
               , random
-              , uuid
               , data-default-class
+              , containers
   default-language: Haskell2010

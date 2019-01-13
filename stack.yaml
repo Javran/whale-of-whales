@@ -5,4 +5,4 @@ packages:
 
 extra-deps:
 - git: https://github.com/Javran/haskell-telegram-api.git
-  commit: 38310acff8cdb7bdfe9f7e0ac92d901211928bb1
+  commit: d5a80a0d406bcae023fb48ad4204d8e72e546ad3

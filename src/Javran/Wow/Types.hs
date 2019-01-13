@@ -7,7 +7,7 @@
   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Javran.Wow.Types
-  ( PendingKick(..)
+  ( UserVerificationMessage(..)
   , WState
   , WPState(..)
   , WEnv(..)
@@ -20,25 +20,27 @@ import Control.Monad.RWS
 import Web.Telegram.API.Bot
 import Servant.Client
 import qualified Data.Text as T
+import qualified Data.Map.Strict as M
+import qualified Data.IntSet as IS
 import System.Random
 import Data.Default.Class
 import GHC.Generics
 
 deriving instance Eq ChatType
 
-data PendingKick = PendingKick
-  { groupId :: T.Text
-  , userId :: Int
-  , timestamp :: UTCTime
-  , kickMeta :: T.Text
+data UserVerificationMessage = UserVerificationMessage
+  { timestamp :: UTCTime
+  , userSet :: IS.IntSet
   } deriving (Read, Show, Eq)
 
 -- "P" for persistent
 data WPState = WPState
   { lastUpdate :: Maybe Int
-    -- TODO: key by user (new join event shouldn't update existing records)
-  , pendingKicks :: [PendingKick]
+  , pendingKicks :: M.Map (Int, T.Text) UserVerificationMessage
   } deriving (Read, Show, Eq, Generic)
+
+instance Default (M.Map a b) where
+  def = M.empty
 
 instance Default WPState
 

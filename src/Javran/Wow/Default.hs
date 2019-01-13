@@ -16,3 +16,4 @@ instance Default AnswerCallbackQueryRequest
 instance Default SendMessageRequest
 instance Default InlineKeyboardButton
 instance Default GetUpdatesRequest
+instance Default DeleteMessageRequest

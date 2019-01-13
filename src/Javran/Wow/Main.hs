@@ -2,7 +2,6 @@
     OverloadedStrings
   , NamedFieldPuns
   , RecordWildCards
-  , LambdaCase
   , MultiWayIf
   #-}
 module Javran.Wow.Main
