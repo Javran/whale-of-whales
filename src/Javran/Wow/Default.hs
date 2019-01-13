@@ -17,3 +17,4 @@ instance Default SendMessageRequest
 instance Default InlineKeyboardButton
 instance Default GetUpdatesRequest
 instance Default DeleteMessageRequest
+instance Default a => Default (SendStickerRequest a)

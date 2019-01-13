@@ -54,6 +54,7 @@ data WEnv = WEnv
   , errFile :: FilePath
   , stateFile :: FilePath
   , watchingGroups :: [Int64]
+  , whaleStickers :: [T.Text]
   }
 
 type WowM a = RWST WEnv () WState ClientM a

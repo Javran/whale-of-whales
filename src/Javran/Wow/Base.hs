@@ -13,6 +13,7 @@ module Javran.Wow.Base
   , appendLogTo
   , tryWithTag
   , genNextM
+  , genNextRM
   , loadState
   , saveState
   ) where
@@ -61,6 +62,13 @@ genNextM :: Random v => WowM v
 genNextM = do
     (_, rGen) <- get
     let (r, rGen') = random rGen
+    modify (\(p, _) -> (p, rGen'))
+    pure r
+
+genNextRM :: Random v => (v, v) -> WowM v
+genNextRM range = do
+    (_, rGen) <- get
+    let (r, rGen') = randomR range rGen
     modify (\(p, _) -> (p, rGen'))
     pure r
 

@@ -5,6 +5,7 @@
   , MultiWayIf
   , ScopedTypeVariables
   , TupleSections
+  , TypeApplications
   #-}
 module Javran.Wow.Worker
   ( handleUpdate
@@ -35,12 +36,42 @@ bumpLastSeen Update{..} = do
     modify (\(s@WPState{lastUpdate},rg) ->
               (s {lastUpdate = maybe (Just update_id) updF lastUpdate}, rg))
 
+extractBotCommand :: Message -> Maybe T.Text
+extractBotCommand msg
+  | Message { entities = Just es, text = Just content } <- msg
+  , MessageEntity {me_offset, me_length}:_ <-
+      filter (\m -> me_type m == "bot_command") es
+  = Just (T.toLower . T.take me_length . T.drop me_offset $ content)
+  | otherwise = Nothing
+
 handleUpdate :: Update -> WowM ()
 handleUpdate upd@Update{..} = do
     shouldProcess <- asks (\WEnv{watchingGroups} curChatId ->
                              curChatId `elem` watchingGroups)
     bumpLastSeen upd
     case upd of
+      Update
+        { message =
+            Just msg@Message
+              { chat = Chat {chat_id}
+              }
+        }
+        | shouldProcess chat_id
+        , Just cmd <- extractBotCommand msg -> do
+            let sendWhale = do
+                  WEnv {whaleStickers} <- ask
+                  let l = length whaleStickers
+                  ind <- genNextRM (0, l-1)
+                  _ <- tryWithTag "Whale" $ liftTC $
+                    sendStickerM ((def @(SendStickerRequest T.Text))
+                                      { sticker_chat_id = ChatId chat_id
+                                      , sticker_sticker = whaleStickers !! ind :: T.Text
+                                      })
+                  pure ()
+            case cmd of
+              "/whale" -> sendWhale
+              "/whales" -> sendWhale
+              _ -> liftIO $ putStrLn $ "unrecognized command: " ++ T.unpack cmd
       Update
         { callback_query =
             Just CallbackQuery
@@ -76,13 +107,30 @@ handleUpdate upd@Update{..} = do
         { message =
             Just Message
                  { chat = Chat {chat_type = ct, chat_id = ci}
-                , new_chat_members = Just users
+                 , new_chat_members = Just users
                  , message_id
                  }
         }
         | shouldProcess ci
         , ct == Group || ct == Supergroup ->
             processNewMembers message_id ci users
+      Update
+        { message =
+            Just Message
+                 { sticker = Just Sticker {sticker_file_id}
+                 , chat = Chat {chat_id}
+                 }
+        }
+        | shouldProcess chat_id ->
+          liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
+      Update
+        { message =
+            Just Message
+                 { chat = Chat {chat_id = ci}
+                 }
+        }
+        | shouldProcess ci ->
+          liftIO $ putStrLn $ "[msg] " ++ show upd
       _ -> do
         let dbg = False
         when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
