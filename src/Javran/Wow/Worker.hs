@@ -37,6 +37,8 @@ bumpLastSeen Update{..} = do
 
 handleUpdate :: Update -> WowM ()
 handleUpdate upd@Update{..} = do
+    shouldProcess <- asks (\WEnv{watchingGroups} curChatId ->
+                             curChatId `elem` watchingGroups)
     bumpLastSeen upd
     case upd of
       Update
@@ -46,7 +48,7 @@ handleUpdate upd@Update{..} = do
               , cq_message = Just Message {message_id, chat = Chat {chat_id}}
               , cq_id
               }
-        } -> do
+        } | shouldProcess chat_id -> do
            let curChatId = T.pack (show chat_id)
            (WPState {pendingKicks = pks},_) <- get
            case M.lookup (message_id, curChatId) pks of
@@ -78,7 +80,8 @@ handleUpdate upd@Update{..} = do
                  , message_id
                  }
         }
-        | ct == Group || ct == Supergroup ->
+        | shouldProcess ci
+        , ct == Group || ct == Supergroup ->
             processNewMembers message_id ci users
       _ -> do
         let dbg = False
