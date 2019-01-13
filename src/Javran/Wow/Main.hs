@@ -2,6 +2,8 @@
     OverloadedStrings
   , NamedFieldPuns
   , RecordWildCards
+  , LambdaCase
+  , MultiWayIf
   #-}
 module Javran.Wow.Main
   ( main
@@ -21,10 +23,11 @@ import Javran.Wow.Worker
 import Javran.Wow.Types
 import Javran.Wow.Base
 
-botWorker :: WEnv -> IO ()
-botWorker wenv@WEnv{..} =
-    -- outter forever for continuing from critical errors
-    forever $ catch run errHandler
+botWorker :: WEnv -> Int -> IO ()
+botWorker wenv@WEnv{..} = fix $ \r errCount ->
+    if errCount < 10
+      then catch (forever run) errHandler >> r (succ errCount)
+      else putStrLn "Too many errors, aborting."
   where
     run :: IO ()
     run = do
@@ -34,7 +37,7 @@ botWorker wenv@WEnv{..} =
       void $ runWowM wenv initState mgr $ do
         -- we need to do this only once at startup
         _ <- tryWithTag "DelWebhook" $ liftTC deleteWebhookM
-        -- inner forever for update handling        
+        -- forever for update handling        
         forever $ do
           (_oldSt@WPState {..}, _) <- get
           {-
@@ -63,5 +66,5 @@ botWorker wenv@WEnv{..} =
 main :: IO ()
 main = do
   we <- getWEnvFromSys
-  void $ forkIO (botWorker we)
+  void $ forkIO (botWorker we 0)
   forever $ threadDelay (1000 * 1000 * 1000)
