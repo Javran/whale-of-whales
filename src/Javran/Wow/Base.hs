@@ -6,9 +6,6 @@
   #-}
 module Javran.Wow.Base
   ( liftTC
-  , asksWEnv
-  , modifyWState
-  , getWState
   , runWowM
   , logM
   , appendLogTo
@@ -34,15 +31,6 @@ liftTC m = do
   tok <- asks botToken
   lift (runReaderT m tok)
 
-asksWEnv :: (WEnv -> r) -> WowM r
-asksWEnv = asks
-
-modifyWState :: (WState -> WState) -> WowM ()
-modifyWState = modify
-
-getWState :: WowM WState
-getWState = get
-
 runWowM :: forall a. WEnv -> WState -> Manager -> WowM a -> IO (Either ServantError a)
 runWowM we@WEnv {botToken = tok} ws mgr act =
     runClient mTC tok mgr
@@ -64,13 +52,13 @@ tryWithTag tag m = catchError @ServantError (Just <$> m) $ \e -> do
 
 genNextM :: Random v => WowM v
 genNextM = do
-    WState {rGen} <- getWState
+    WState {rGen} <- get
     let (r, rGen') = random rGen
-    modifyWState (\s -> s{rGen = rGen'})
+    modify (\s -> s{rGen = rGen'})
     pure r
 
 logM :: String -> WowM ()
-logM msg = asksWEnv errFile >>= \fp -> liftIO (appendLogTo fp msg)
+logM msg = asks errFile >>= \fp -> liftIO (appendLogTo fp msg)
 
 appendLogTo :: FilePath -> String -> IO ()
 appendLogTo logPath msg = do

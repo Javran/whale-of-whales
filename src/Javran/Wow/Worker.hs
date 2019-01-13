@@ -17,6 +17,7 @@ import System.IO
 import Control.Monad.IO.Class
 import Data.String
 import Data.Int
+import Control.Monad.RWS
 import Control.Monad.Catch
 import Web.Telegram.API.Bot
 import Data.Time
@@ -34,7 +35,7 @@ bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do
     -- update last seen id
     let updF oldId = Just $ if oldId < update_id then update_id else oldId
-    modifyWState (\s@WState{lastUpdate} -> s {lastUpdate = maybe (Just update_id) updF lastUpdate})
+    modify (\s@WState{lastUpdate} -> s {lastUpdate = maybe (Just update_id) updF lastUpdate})
 
 handleUpdate :: Update -> WowM ()
 handleUpdate upd@Update{..} = do
@@ -48,7 +49,7 @@ handleUpdate upd@Update{..} = do
                         , cq_id
                         }
         } -> do
-           WState {pendingKicks = pks} <- getWState
+           WState {pendingKicks = pks} <- get
            let aReq = def { cq_callback_query_id = cq_id }
            _ <- liftTC $ answerCallbackQueryM aReq
            let (rmKicks, remainingKicks) = partition isValid pks
@@ -70,7 +71,7 @@ handleUpdate upd@Update{..} = do
                _ <- liftTC $ sendMessageM req 
                pure ()
              _ -> pure ()
-           modifyWState (\s -> s {pendingKicks = remainingKicks})
+           modify (\s -> s {pendingKicks = remainingKicks})
       Update
         { message =
             Just Message
@@ -109,12 +110,12 @@ handleUpdate upd@Update{..} = do
       let newPk :: [PendingKick]
           newPk = mkPk <$> users
           mkPk User {..} = PendingKick (fromString (show chatId)) user_id curTime cbData
-      modifyWState (\s@WState{pendingKicks = pk} -> s {pendingKicks = pk ++ newPk})
+      modify (\s@WState{pendingKicks = pk} -> s {pendingKicks = pk ++ newPk})
 
 handleKicks :: WowM ()
 handleKicks = do
-  WEnv{..} <- asksWEnv id
-  WState{..} <- getWState
+  WEnv{..} <- ask
+  WState{..} <- get
   curTime <- liftIO getCurrentTime
   let (kickingList, stillPending) = partition timeExceeded pendingKicks
       timeExceeded PendingKick{..} = floor timeDiff > kickTimeout
@@ -127,7 +128,7 @@ handleKicks = do
         pure ()
         
   mapM_ kickUser kickingList
-  modifyWState (\s -> s{pendingKicks = stillPending})
+  modify (\s -> s{pendingKicks = stillPending})
 
 loadState :: FilePath -> IO WState
 loadState fp =
@@ -140,6 +141,6 @@ loadState fp =
 
 saveState :: WowM ()
 saveState = do
-    WEnv {..} <- asksWEnv id
-    st <- getWState
+    WEnv {..} <- ask
+    st <- get
     liftIO $ writeFile stateFile (show st)

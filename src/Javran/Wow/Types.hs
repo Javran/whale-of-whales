@@ -14,8 +14,6 @@ module Javran.Wow.Types
 
 import Data.Int
 import Data.Time
-import Control.Monad.Reader
-import Control.Monad.State
 import Control.Monad.RWS
 import Web.Telegram.API.Bot
 import Servant.Client
@@ -48,6 +46,3 @@ data WEnv = WEnv
   }
 
 type WowM a = RWST WEnv () WState ClientM a
-
-  -- ReaderT WEnv (StateT WState ClientM) a
-
