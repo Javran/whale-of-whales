@@ -11,7 +11,6 @@ module Javran.Wow.Base
   , appendLogTo
   , tryWithTag
   , genNextM
-
   ) where
 
 import Data.Time
@@ -52,9 +51,9 @@ tryWithTag tag m = catchError @ServantError (Just <$> m) $ \e -> do
 
 genNextM :: Random v => WowM v
 genNextM = do
-    WState {rGen} <- get
+    (_, rGen) <- get
     let (r, rGen') = random rGen
-    modify (\s -> s{rGen = rGen'})
+    modify (\(p, _) -> (p, rGen'))
     pure r
 
 logM :: String -> WowM ()

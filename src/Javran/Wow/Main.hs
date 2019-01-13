@@ -12,7 +12,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Web.Telegram.API.Bot
 import Control.Monad
 import Control.Monad.RWS
-import Control.Exception
+import Control.Monad.Catch
 import Control.Concurrent
 import Data.Default.Class
 
@@ -31,19 +31,29 @@ botWorker wenv@WEnv{..} =
       putStrLn "bot started"
       mgr <- newManager tlsManagerSettings
       initState <- loadState stateFile
-      -- inner forever for update handling
-      void $ runWowM wenv initState mgr $ forever $ do
-        WState {..} <- get
-        mapM_ handleUpdate =<< liftTC (do
-            void deleteWebhookM
+      void $ runWowM wenv initState mgr $ do
+        -- we need to do this only once at startup
+        _ <- tryWithTag "DelWebhook" $ liftTC deleteWebhookM
+        -- inner forever for update handling        
+        forever $ do
+          (_oldSt@WPState {..}, _) <- get
+          {-
+            INVARIANT:
+              - handleUpdate should be able to capture all ServantError inside of it.
+              - same invariant for handleKicks
+           -}
+          mapM_ handleUpdate =<< liftTC (do
             let req = def
-                        { updates_offset = succ <$> lastUpdate
-                        , updates_timeout = Just pullTimeout
-                        }
+                      { updates_offset = succ <$> lastUpdate
+                      , updates_timeout = Just pullTimeout
+                      }
             Response {..} <- getUpdatesM req
             pure result)
-        handleKicks
-        saveState
+          handleKicks
+          -- TODO: diff-then-write
+          -- newSt <- get
+          -- when (oldSt /= newSt) saveState
+          saveState
 
     errHandler :: SomeException -> IO ()
     errHandler e =

@@ -3,11 +3,13 @@
   , ExplicitForAll
   , NamedFieldPuns
   , StandaloneDeriving
+  , DeriveGeneric
   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Javran.Wow.Types
   ( PendingKick(..)
-  , WState(..)
+  , WState
+  , WPState(..)
   , WEnv(..)
   , WowM
   ) where
@@ -19,6 +21,8 @@ import Web.Telegram.API.Bot
 import Servant.Client
 import qualified Data.Text as T
 import System.Random
+import Data.Default.Class
+import GHC.Generics
 
 deriving instance Eq ChatType
 
@@ -29,12 +33,17 @@ data PendingKick = PendingKick
   , kickMeta :: T.Text
   } deriving (Read, Show)
 
-data WState = WState
+-- "P" for persistent
+data WPState = WPState
   { lastUpdate :: Maybe Int
     -- TODO: key by user (new join event shouldn't update existing records)
   , pendingKicks :: [PendingKick]
-  , rGen :: StdGen
-  } deriving (Read, Show)
+  } deriving (Read, Show, Generic)
+
+instance Default WPState
+
+-- separation of persistent state vs. runtime-only ones
+type WState = (WPState, StdGen)
 
 data WEnv = WEnv
   { botToken :: Token

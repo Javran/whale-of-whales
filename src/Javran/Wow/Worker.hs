@@ -5,6 +5,7 @@
   , MultiWayIf
   , ScopedTypeVariables
   , TypeApplications
+  , TupleSections
   #-}
 module Javran.Wow.Worker
   ( handleUpdate
@@ -35,7 +36,8 @@ bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do
     -- update last seen id
     let updF oldId = Just $ if oldId < update_id then update_id else oldId
-    modify (\s@WState{lastUpdate} -> s {lastUpdate = maybe (Just update_id) updF lastUpdate})
+    modify (\(s@WPState{lastUpdate},rg) ->
+              (s {lastUpdate = maybe (Just update_id) updF lastUpdate}, rg))
 
 handleUpdate :: Update -> WowM ()
 handleUpdate upd@Update{..} = do
@@ -49,7 +51,7 @@ handleUpdate upd@Update{..} = do
                         , cq_id
                         }
         } -> do
-           WState {pendingKicks = pks} <- get
+           (WPState {pendingKicks = pks},_) <- get
            let aReq = def { cq_callback_query_id = cq_id }
            _ <- liftTC $ answerCallbackQueryM aReq
            let (rmKicks, remainingKicks) = partition isValid pks
@@ -71,7 +73,7 @@ handleUpdate upd@Update{..} = do
                _ <- liftTC $ sendMessageM req 
                pure ()
              _ -> pure ()
-           modify (\s -> s {pendingKicks = remainingKicks})
+           modify (\(s, rg) -> (s {pendingKicks = remainingKicks},rg))
       Update
         { message =
             Just Message
@@ -83,8 +85,8 @@ handleUpdate upd@Update{..} = do
         | ct == Group || ct == Supergroup ->
             processNewMembers message_id ci (filter (not . user_is_bot) users)
       _ -> do
-        liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
-        pure ()
+        let dbg = False
+        when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
   where
     processNewMembers _ _ [] = pure ()
     processNewMembers msgId chatId users = do
@@ -110,12 +112,12 @@ handleUpdate upd@Update{..} = do
       let newPk :: [PendingKick]
           newPk = mkPk <$> users
           mkPk User {..} = PendingKick (fromString (show chatId)) user_id curTime cbData
-      modify (\s@WState{pendingKicks = pk} -> s {pendingKicks = pk ++ newPk})
+      modify (\(s@WPState{pendingKicks = pk}, rg) -> (s {pendingKicks = pk ++ newPk}, rg))
 
 handleKicks :: WowM ()
 handleKicks = do
   WEnv{..} <- ask
-  WState{..} <- get
+  (WPState{..},_) <- get
   curTime <- liftIO getCurrentTime
   let (kickingList, stillPending) = partition timeExceeded pendingKicks
       timeExceeded PendingKick{..} = floor timeDiff > kickTimeout
@@ -128,16 +130,22 @@ handleKicks = do
         pure ()
         
   mapM_ kickUser kickingList
-  modify (\s -> s{pendingKicks = stillPending})
+  modify (\(s,rg) -> (s{pendingKicks = stillPending}, rg))
 
 loadState :: FilePath -> IO WState
 loadState fp =
-    catch (read <$> readFile fp) errHandler
+    catch load errHandler
   where
+    load :: IO WState
+    load = do
+      ps <- read <$> readFile fp
+      g <- newStdGen
+      pure (ps,g)
+    
     errHandler :: SomeException -> IO WState
     errHandler e = do
       hPutStrLn stderr $ "Exception caught: " ++ displayException e
-      WState Nothing [] <$> newStdGen
+      (def,) <$> newStdGen
 
 saveState :: WowM ()
 saveState = do
