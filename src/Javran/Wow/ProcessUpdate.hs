@@ -7,9 +7,9 @@
   , TupleSections
   , TypeApplications
   #-}
-module Javran.Wow.Worker
-  ( handleUpdate
-  , handleKicks
+module Javran.Wow.ProcessUpdate
+  ( processUpdate
+  , processKicks
   , loadState
   , saveState
   ) where
@@ -44,8 +44,8 @@ extractBotCommand msg
   = Just (T.toLower . T.take me_length . T.drop me_offset $ content)
   | otherwise = Nothing
 
-handleUpdate :: Update -> WowM ()
-handleUpdate upd@Update{..} = do
+processUpdate :: Update -> WowM ()
+processUpdate upd@Update{..} = do
     shouldProcess <- asks (\WEnv{watchingGroups} curChatId ->
                              curChatId `elem` watchingGroups)
     bumpLastSeen upd
@@ -183,8 +183,8 @@ handleUpdate upd@Update{..} = do
                       (s {pendingKicks = modifyKick pks}, rg))
 
 -- kick timed out users, and try to delete survey messages if needed
-handleKicks :: WowM ()
-handleKicks = do
+processKicks :: WowM ()
+processKicks = do
   WEnv{kickTimeout} <- ask
   (WPState{pendingKicks},_) <- get
   curTime <- liftIO getCurrentTime

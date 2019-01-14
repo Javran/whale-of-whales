@@ -18,7 +18,7 @@ import Control.Concurrent
 import Data.Default.Class
 
 import Javran.Wow.Env
-import Javran.Wow.Worker
+import Javran.Wow.ProcessUpdate
 import Javran.Wow.Types
 import Javran.Wow.Base
 
@@ -44,14 +44,14 @@ botWorker wenv@WEnv{..} = fix $ \r errCount ->
               - handleUpdate should be able to capture all ServantError inside of it.
               - same invariant for handleKicks
            -}
-          mapM_ handleUpdate =<< liftTC (do
+          mapM_ processUpdate =<< liftTC (do
             let req = def
                       { updates_offset = succ <$> lastUpdate
                       , updates_timeout = Just pullTimeout
                       }
             Response {..} <- getUpdatesM req
             pure result)
-          handleKicks
+          processKicks
           (newSt, _) <- get
           when (oldSt /= newSt) saveState
 

@@ -27,7 +27,7 @@ executable wow
               , Javran.Wow.Base
               , Javran.Wow.Default
               , Javran.Wow.Env
-              , Javran.Wow.Worker
+              , Javran.Wow.ProcessUpdate
   build-depends:
                 base
               , telegram-api
