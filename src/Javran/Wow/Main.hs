@@ -22,6 +22,10 @@ import Javran.Wow.ProcessUpdate
 import Javran.Wow.Types
 import Javran.Wow.Base
 
+{-
+  TODO: json for bot config and state serialization
+ -}
+
 botWorker :: WEnv -> Int -> IO ()
 botWorker wenv@WEnv{..} = fix $ \r errCount ->
     if errCount < 10

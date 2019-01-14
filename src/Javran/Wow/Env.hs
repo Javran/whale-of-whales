@@ -36,7 +36,11 @@ parseStickers raw = case readP_to_S parser raw of
     parser :: ReadP [String]
     parser =
       skipSpaces *>
-      ((munch1 (\x -> not (isSpace x) && x /= ',') <* skipSpaces) `sepBy` (char ',' <* skipSpaces)) <*
+      (
+        (munch1 (\x -> not (isSpace x) && x /= ',') <* skipSpaces)
+        `sepBy`
+        (char ',' <* skipSpaces)
+      ) <*
       optional (char ',' <* skipSpaces) <*
       eof
 
