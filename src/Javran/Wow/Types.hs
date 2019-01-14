@@ -28,6 +28,7 @@ import System.Random
 import Data.Default.Class
 import GHC.Generics
 import Data.Aeson
+import Data.Aeson.Types
 
 deriving instance Eq ChatType
 
@@ -61,6 +62,7 @@ data WEnv = WEnv
   , whaleStickers :: [T.Text]
   } deriving (Generic)
 
+-- TODO: migrate to Yaml
 instance ToJSON WEnv where
   toJSON WEnv{..} =
       object [ "bot-token" .= botTokStr
@@ -73,5 +75,17 @@ instance ToJSON WEnv where
              ]
     where
       Token botTokStr = botToken
+
+instance FromJSON WEnv where
+  parseJSON (Object o) =
+      WEnv
+        <$> (Token <$> (o .: "bot-token"))
+        <*> o .: "pull-timeout"
+        <*> o .: "kick-timeout"
+        <*> o .: "err-file"
+        <*> o .: "state-file"
+        <*> o .: "watching-groups"
+        <*> o .: "whale-stickers"
+  parseJSON invalid = typeMismatch "WEnv" invalid
 
 type WowM a = RWST WEnv () WState ClientM a
