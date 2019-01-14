@@ -4,6 +4,8 @@
   , NamedFieldPuns
   , StandaloneDeriving
   , DeriveGeneric
+  , RecordWildCards
+  , OverloadedStrings
   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Javran.Wow.Types
@@ -25,6 +27,7 @@ import qualified Data.IntSet as IS
 import System.Random
 import Data.Default.Class
 import GHC.Generics
+import Data.Aeson
 
 deriving instance Eq ChatType
 
@@ -51,10 +54,24 @@ data WEnv = WEnv
   { botToken :: Token
   , pullTimeout :: Int
   , kickTimeout :: Int
+    -- TODO: errFile -> logFile
   , errFile :: FilePath
   , stateFile :: FilePath
   , watchingGroups :: [Int64]
   , whaleStickers :: [T.Text]
-  }
+  } deriving (Generic)
+
+instance ToJSON WEnv where
+  toJSON WEnv{..} =
+      object [ "bot-token" .= botTokStr
+             , "pull-timeout" .= pullTimeout
+             , "kick-timeout" .= kickTimeout
+             , "err-file" .= errFile
+             , "state-file" .= stateFile
+             , "watching-groups" .= watchingGroups
+             , "whale-stickers" .= whaleStickers
+             ]
+    where
+      Token botTokStr = botToken
 
 type WowM a = RWST WEnv () WState ClientM a

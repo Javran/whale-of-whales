@@ -26,7 +26,7 @@ getWEnvFromSys = do
     stateFile <- getEnv "STATE_FILE"
     watchingGroups <- parseChatIds <$> getEnv "WATCHING_GROUPS"
     whaleStickers <- parseStickers <$> getEnv "WHALE_STICKERS"
-    pure (WEnv {..})
+    pure WEnv {..}
 
 parseStickers :: String -> [T.Text]
 parseStickers raw = case readP_to_S parser raw of

@@ -41,4 +41,6 @@ executable wow
               , random
               , data-default-class
               , containers
+              , aeson
+              , yaml
   default-language: Haskell2010

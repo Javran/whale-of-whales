@@ -23,7 +23,9 @@ import Javran.Wow.Types
 import Javran.Wow.Base
 
 {-
-  TODO: json for bot config and state serialization
+  TODO:
+  - json for bot config and state serialization
+  - or perhaps yaml since it's still closely related in some sense.
  -}
 
 botWorker :: WEnv -> Int -> IO ()
