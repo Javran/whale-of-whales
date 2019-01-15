@@ -156,8 +156,9 @@ processUpdate upd@Update{..} = do
                  , chat = Chat {chat_id}
                  }
         }
-        | shouldProcess chat_id ->
+        | shouldProcess chat_id -> do
           liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
+          liftIO $ putStrLn $ "[sticker] " ++ show upd          
       Update
         { message =
             Just Message
