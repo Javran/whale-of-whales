@@ -113,4 +113,34 @@ instance FromJSON WEnv where
         <*> o .: "whale-stickers"
   parseJSON invalid = typeMismatch "WEnv" invalid
 
+-- TODO: separate group states
+{-
+  mechanism for repeater cooldown
+
+  the idea is that bot shouldn't repeat message too much.
+  we restrict bot from repeating a message by putting it into a cooldown.
+  meanwhile, bot are allowed to repeat whatever she want but whatever is sent
+  shouldn't match anything from cooldown and the sent message is put into
+  cooldown.
+
+  note that RepeatDigest does not exactly represent original message:
+
+  - for RepeatMesssageDigest, spaces and non-printables are removed
+  - for RepeatStickerDigest, file id must be valid
+
+  by design, repeating message is recognized by
+  looking at last update and check against the sequence of RepeatDigest,
+  which means the very message that we are recognizing should be
+  the single source of truth:
+
+  - if it's a forwarding message, we do the same
+  - if it's not, we send message instead of forwarding,
+    and content should be copied exactly from the message we are recognizing
+    instead of using data from Digest
+
+ -}
+data RepeatDigest
+  = RepeatMesssageDigest T.Text -- ^ sanitized message
+  | RepeatStickerDigest T.Text -- ^ sticker, payload should be a valid file id
+
 type WowM a = RWST WEnv () WState ClientM a
