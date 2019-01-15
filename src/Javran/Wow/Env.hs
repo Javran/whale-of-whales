@@ -14,6 +14,7 @@ import Data.Int
 import Web.Telegram.API.Bot
 import qualified Data.Text as T
 import Data.Char
+import qualified Data.Yaml as Yaml
 
 import Javran.Wow.Types
 
@@ -26,6 +27,7 @@ getWEnvFromSys = do
     stateFile <- getEnv "STATE_FILE"
     watchingGroups <- parseChatIds <$> getEnv "WATCHING_GROUPS"
     whaleStickers <- parseStickers <$> getEnv "WHALE_STICKERS"
+    Yaml.encodeFile "config.yaml" WEnv{..}
     pure WEnv {..}
 
 parseStickers :: String -> [T.Text]

@@ -31,6 +31,7 @@ import System.IO
 import System.IO.Error
 import Network.HTTP.Client (Manager)
 import Data.Default.Class
+import qualified Data.Yaml as Yaml
 
 import Javran.Wow.Types
 
@@ -107,4 +108,5 @@ saveState :: WowM ()
 saveState = do
     WEnv {..} <- ask
     (st, _) <- get
+    liftIO $ Yaml.encodeFile "state.yaml" st
     liftIO $ writeFile stateFile (show st)
