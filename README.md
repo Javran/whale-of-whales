@@ -1,12 +1,14 @@
 # Whale of Whales - a simple Telegram Bot
 
-These variables need to be present in the enviroment:
+First you need a config file written in YAML,
+see [sampe config file](./config-sample.yaml) for an example.
 
-- `BOT_TOKEN` bot API token with "bot" being first 3 characters
-- `PULL_TIMEOUT` timeout in seconds for the long pulling
-- `KICK_TIMEOUT` timeout in seconds for bot to decide kicking a newly added member
-- `ERR_FILE` a file path for outputing error messages (if any)
-- `STATE_FILE` a file path for storing bot state (don't have to actually present upon startup)
-- `WATCHING_GROUPS` a comma separated list of chat ids that this bot should watch
+Of course for this to work you need a token for bot API,
+and make sure privacy mode is disabled
+(otherwise bot cannot receive updates from groups)
 
-The `wowz-sample` provides a sample launcher in which you can specify all these variables.
+After proper setups, run it with:
+
+```bash
+stack build && stack exec -- wow ./path/to/your/config.yaml
+```
