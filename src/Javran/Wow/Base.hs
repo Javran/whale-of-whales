@@ -29,10 +29,10 @@ import Web.Telegram.API.Bot
 import Servant.Client
 import Control.Exception
 import System.IO
-import System.IO.Error
 import Network.HTTP.Client (Manager)
 import Data.Default.Class
 import qualified Data.Yaml as Yaml
+import Data.List
 
 import Javran.Wow.Types
 
@@ -85,6 +85,11 @@ appendLogTo logPath msg = do
         header = "[" <> dateStr <> " " <> timeStr <> "]"
     appendFile logPath (header <> " " <> msg <> "\n")
 
+isYamlFileNotFoundException :: Yaml.ParseException -> Bool
+isYamlFileNotFoundException (Yaml.InvalidYaml (Just (Yaml.YamlException msg)))
+  | "Yaml file not found: " `isPrefixOf` msg = True
+isYamlFileNotFoundException _ = False
+
 loadState :: FilePath -> IO WState
 loadState fp =
     catch load errHandler
@@ -97,8 +102,8 @@ loadState fp =
     
     errHandler :: SomeException -> IO WState
     errHandler e
-      | Just ioe <- fromException @IOException e
-      , isDoesNotExistError ioe = do
+      | Just pe <- fromException @Yaml.ParseException e
+      , isYamlFileNotFoundException pe = do
           hPutStrLn stderr "State file does not exist, assuming fresh start."
           (def,) <$> newStdGen
       | otherwise = do
