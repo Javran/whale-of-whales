@@ -37,6 +37,12 @@ data UserVerificationMessage = UserVerificationMessage
   , userSet :: IS.IntSet
   } deriving (Read, Show, Eq)
 
+instance ToJSON UserVerificationMessage where
+  toJSON UserVerificationMessage {..} =
+    object [ "timestamp" .= timestamp
+           , "user-set" .= userSet
+           ] 
+
 instance FromJSON UserVerificationMessage where
   parseJSON (Object o) =
     UserVerificationMessage
@@ -49,6 +55,12 @@ data WPState = WPState
   { lastUpdate :: Maybe Int
   , pendingKicks :: M.Map (Int, T.Text) UserVerificationMessage
   } deriving (Read, Show, Eq, Generic)
+
+instance ToJSON WPState where
+  toJSON WPState{..} =
+    object [ "last-update" .= lastUpdate
+           , "pending-kicks" .= pendingKicks
+           ]
 
 instance FromJSON WPState where
   parseJSON (Object o) =
