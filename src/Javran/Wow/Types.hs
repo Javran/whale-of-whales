@@ -87,7 +87,6 @@ data WEnv = WEnv
   , whaleStickers :: [T.Text]
   } deriving (Generic)
 
--- TODO: migrate to Yaml
 instance ToJSON WEnv where
   toJSON WEnv{..} =
       object [ "bot-token" .= botTokStr
