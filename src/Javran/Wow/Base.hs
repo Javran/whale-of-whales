@@ -91,7 +91,7 @@ loadState fp =
   where
     load :: IO WState
     load = do
-      ps <- read <$> readFile fp
+      ps <- Yaml.decodeFileThrow fp
       g <- newStdGen
       pure (ps,g)
     
@@ -109,8 +109,7 @@ saveState :: WowM ()
 saveState = do
     WEnv {..} <- ask
     (st, _) <- get
-    liftIO $ Yaml.encodeFile "state.yaml" st
-    liftIO $ writeFile stateFile (show st)
+    liftIO $ Yaml.encodeFile stateFile st
 
 getWEnv :: FilePath -> IO WEnv
 getWEnv = Yaml.decodeFileThrow
