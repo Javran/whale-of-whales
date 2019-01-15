@@ -85,6 +85,9 @@ appendLogTo logPath msg = do
         header = "[" <> dateStr <> " " <> timeStr <> "]"
     appendFile logPath (header <> " " <> msg <> "\n")
 
+
+-- stolen from:
+-- https://github.com/snoyberg/yaml/blob/35f0286d83acf6c27e00cf8edbfc43c841109760/yaml/test/Data/Yaml/IncludeSpec.hs#L131-L134
 isYamlFileNotFoundException :: Yaml.ParseException -> Bool
 isYamlFileNotFoundException (Yaml.InvalidYaml (Just (Yaml.YamlException msg)))
   | "Yaml file not found: " `isPrefixOf` msg = True
