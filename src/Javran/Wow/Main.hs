@@ -20,7 +20,6 @@ import Data.Default.Class
 import System.Environment
 import System.Exit
 
-import Javran.Wow.Env
 import Javran.Wow.ProcessUpdate
 import Javran.Wow.Types
 import Javran.Wow.Base

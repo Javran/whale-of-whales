@@ -26,7 +26,6 @@ executable wow
                 Javran.Wow.Types
               , Javran.Wow.Base
               , Javran.Wow.Default
-              , Javran.Wow.Env
               , Javran.Wow.ProcessUpdate
   build-depends:
                 base

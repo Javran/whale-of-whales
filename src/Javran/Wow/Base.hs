@@ -16,6 +16,7 @@ module Javran.Wow.Base
   , genNextRM
   , loadState
   , saveState
+  , getWEnv
   ) where
 
 import Data.Time
@@ -110,3 +111,6 @@ saveState = do
     (st, _) <- get
     liftIO $ Yaml.encodeFile "state.yaml" st
     liftIO $ writeFile stateFile (show st)
+
+getWEnv :: FilePath -> IO WEnv
+getWEnv = Yaml.decodeFileThrow
