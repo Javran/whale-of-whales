@@ -74,7 +74,7 @@ genNextRM range = do
     pure r
 
 logM :: String -> WowM ()
-logM msg = asks errFile >>= \fp -> liftIO (appendLogTo fp msg)
+logM msg = asks logFile >>= \fp -> liftIO (appendLogTo fp msg)
 
 appendLogTo :: FilePath -> String -> IO ()
 appendLogTo logPath msg = do

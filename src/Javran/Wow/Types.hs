@@ -81,8 +81,7 @@ data WEnv = WEnv
   { botToken :: Token
   , pullTimeout :: Int
   , kickTimeout :: Int
-    -- TODO: errFile -> logFile
-  , errFile :: FilePath
+  , logFile :: FilePath
   , stateFile :: FilePath
   , watchingGroups :: [Int64]
   , whaleStickers :: [T.Text]
@@ -94,7 +93,7 @@ instance ToJSON WEnv where
       object [ "bot-token" .= botTokStr
              , "pull-timeout" .= pullTimeout
              , "kick-timeout" .= kickTimeout
-             , "err-file" .= errFile
+             , "log-file" .= logFile
              , "state-file" .= stateFile
              , "watching-groups" .= watchingGroups
              , "whale-stickers" .= whaleStickers
@@ -108,7 +107,7 @@ instance FromJSON WEnv where
         <$> (Token <$> (o .: "bot-token"))
         <*> o .: "pull-timeout"
         <*> o .: "kick-timeout"
-        <*> o .: "err-file"
+        <*> o .: "log-file"
         <*> o .: "state-file"
         <*> o .: "watching-groups"
         <*> o .: "whale-stickers"

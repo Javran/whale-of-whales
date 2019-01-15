@@ -4,7 +4,7 @@
   , OverloadedStrings
   #-}
 module Javran.Wow.Env
-  ( getWEnvFromSys
+  ( getWEnv
   ) where
 
 import System.Environment
@@ -18,17 +18,8 @@ import qualified Data.Yaml as Yaml
 
 import Javran.Wow.Types
 
-getWEnvFromSys :: IO WEnv
-getWEnvFromSys = do
-    botToken <- Token . fromString <$> getEnv "BOT_TOKEN"
-    pullTimeout <- read @Int <$> getEnv "PULL_TIMEOUT"
-    kickTimeout <- read @Int <$> getEnv "KICK_TIMEOUT"
-    errFile <- getEnv "ERR_FILE"
-    stateFile <- getEnv "STATE_FILE"
-    watchingGroups <- parseChatIds <$> getEnv "WATCHING_GROUPS"
-    whaleStickers <- parseStickers <$> getEnv "WHALE_STICKERS"
-    Yaml.encodeFile "config.yaml" WEnv{..}
-    pure WEnv {..}
+getWEnv :: FilePath -> IO WEnv
+getWEnv = Yaml.decodeFileThrow
 
 parseStickers :: String -> [T.Text]
 parseStickers raw = case readP_to_S parser raw of

@@ -3,6 +3,7 @@
   , NamedFieldPuns
   , RecordWildCards
   , MultiWayIf
+  , LambdaCase
   #-}
 module Javran.Wow.Main
   ( main
@@ -16,6 +17,8 @@ import Control.Monad.RWS
 import Control.Monad.Catch
 import Control.Concurrent
 import Data.Default.Class
+import System.Environment
+import System.Exit
 
 import Javran.Wow.Env
 import Javran.Wow.ProcessUpdate
@@ -63,11 +66,17 @@ botWorker wenv@WEnv{..} = fix $ \r errCount ->
 
     errHandler :: SomeException -> IO ()
     errHandler e =
-      appendLogTo errFile $
+      appendLogTo logFile $
         "Exception caught: " ++ displayException e
 
 main :: IO ()
-main = do
-  we <- getWEnvFromSys
-  void $ forkIO (botWorker we 0)
-  forever $ threadDelay (1000 * 1000 * 1000)
+main =
+  getArgs >>= \case
+    [configFp] ->
+      do
+        we <- getWEnv configFp
+        void $ forkIO (botWorker we 0)
+        forever $ threadDelay (1000 * 1000 * 1000)
+    _ ->
+      putStrLn "wow <config_file.yaml>" >>
+      exitFailure
