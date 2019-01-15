@@ -37,11 +37,25 @@ data UserVerificationMessage = UserVerificationMessage
   , userSet :: IS.IntSet
   } deriving (Read, Show, Eq)
 
+instance FromJSON UserVerificationMessage where
+  parseJSON (Object o) =
+    UserVerificationMessage
+      <$> o .: "timestamp"
+      <*> o .: "user-set"
+  parseJSON invalid = typeMismatch "UserVerificationMessage" invalid
+
 -- "P" for persistent
 data WPState = WPState
   { lastUpdate :: Maybe Int
   , pendingKicks :: M.Map (Int, T.Text) UserVerificationMessage
   } deriving (Read, Show, Eq, Generic)
+
+instance FromJSON WPState where
+  parseJSON (Object o) =
+    WPState
+      <$> o .:? "last-update"
+      <*> o .: "pending-kicks"
+  parseJSON invalid = typeMismatch "WPState" invalid
 
 instance Default (M.Map a b) where
   def = M.empty
