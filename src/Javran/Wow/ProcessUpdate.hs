@@ -241,15 +241,11 @@ processKicks = do
     let processKicksByGroup :: T.Text -> GroupState -> WowM GroupState
         processKicksByGroup groupId gs@GroupState{pendingKicks} = do
           let (outdatedKicks, stillPendingKicks) = IM.partition timeExceeded pendingKicks
+              -- collect verif message ids 
               spToClear0 :: IS.IntSet
               spToClear0 = IM.keysSet outdatedKicks
               -- collect users that we want to kick out
-              kickingUsers =
-                IM.foldr
-                  (\UserVerificationMessage{userSet} xs ->
-                     IS.toList userSet ++ xs)
-                []
-                outdatedKicks
+              kickingUsers = IS.toList $ foldMap userSet outdatedKicks
           forM_ kickingUsers $ \userId ->
             tryWithTag "KickAttempt" $
               liftTC $ do
