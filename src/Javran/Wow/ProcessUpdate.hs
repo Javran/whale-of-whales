@@ -21,8 +21,10 @@ import Web.Telegram.API.Bot
 import Data.Time
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
+import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import qualified Data.Set as S
+import Data.Maybe
 
 import Javran.Wow.Types
 import Javran.Wow.Base
@@ -43,6 +45,18 @@ extractBotCommand msg
       filter (\m -> me_type m == "bot_command") es
   = Just (T.toLower . T.take me_length . T.drop me_offset $ content)
   | otherwise = Nothing
+
+getGroupState :: T.Text -> WowM GroupState
+getGroupState chatId =
+  gets $ fromMaybe def . M.lookup chatId . groupStates . fst
+
+modifyGroupState :: T.Text -> (GroupState -> GroupState) -> WowM ()
+modifyGroupState chatId f =
+    modify (\(s@WPState{groupStates = gss},rg) ->
+              (s {groupStates = M.alter f' chatId gss}, rg))
+  where
+    f' Nothing = Just (f def)
+    f' (Just x) = Just (f x)
 
 {-
 
@@ -116,8 +130,9 @@ processUpdate upd@Update{..} = do
               }
         } | shouldProcess chat_id -> do
            let curChatId = T.pack (show chat_id)
-           (WPState {pendingKicks = pks},_) <- get
-           case M.lookup (message_id, curChatId) pks of
+           groupState <- getGroupState curChatId
+           let GroupState {pendingKicks = pks} = groupState
+           case IM.lookup message_id pks of
              Nothing -> pure ()
              Just UserVerificationMessage {..} -> do
                let aReq = def { cq_callback_query_id = cq_id }
@@ -127,9 +142,10 @@ processUpdate upd@Update{..} = do
                  -- remove record and say hi
                  let modifyUVM x@UserVerificationMessage{userSet = us} =
                        x {userSet = IS.delete user_id us}
-                     modifyKick = M.adjust modifyUVM (message_id, curChatId)
-                 modify (\(s,rg) ->
-                          (s {pendingKicks = modifyKick pks}, rg))
+                     modifyKick :: GroupState -> GroupState
+                     modifyKick gs@GroupState {pendingKicks = pks'} =
+                       gs {pendingKicks = IM.adjust modifyUVM message_id pks'}
+                 modifyGroupState curChatId modifyKick
                  let welcomeMsg = case user_username of
                        Just u -> "欢迎" <> u <> "!"
                        Nothing -> "欢迎" <> fromString (show user_id) <> "!"
@@ -172,16 +188,11 @@ processUpdate upd@Update{..} = do
         when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
   where
     processNewMembers msgId chatId usersInp = do
-        (WPState {pendingKicks}, _) <- get
         let curGroupId = T.pack (show chatId)
+        GroupState {pendingKicks} <- getGroupState curGroupId
             -- extract pending users (for this group)
-            pendingUsers :: IS.IntSet
-            pendingUsers = M.foldrWithKey extractUser IS.empty pendingKicks
-              where
-                extractUser (_, groupId) uvm s1 =
-                  if curGroupId == groupId
-                    then userSet uvm `IS.union` s1
-                    else s1
+        let pendingUsers :: IS.IntSet
+            pendingUsers = foldMap userSet pendingKicks
             shouldVerify user =
               not (user_is_bot user) && not (user_id user `IS.member` pendingUsers)
         -- we should only verify non-bot users,
@@ -208,59 +219,60 @@ processUpdate upd@Update{..} = do
                       }
             Response{result = Message {message_id = respMsgId}} <- liftTC $ sendMessageM req
             timestamp <- liftIO getCurrentTime
-            let modifyKick =
-                  M.insert
-                    (respMsgId, curGroupId)
-                    UserVerificationMessage
-                      { timestamp
-                      , userSet = IS.fromList (user_id <$> users)
-                      }
-            modify (\(s@WPState {pendingKicks = pks},rg) ->
-                      (s {pendingKicks = modifyKick pks}, rg))
+            let modifyKick gs@GroupState{pendingKicks = pks} =
+                    gs {pendingKicks = IM.insert respMsgId uvm pks}
+                  where
+                    uvm = UserVerificationMessage
+                          { timestamp
+                            , userSet = IS.fromList (user_id <$> users)
+                          }
+            modifyGroupState curGroupId modifyKick
 
 -- kick timed out users, and try to delete survey messages if needed
 processKicks :: WowM ()
 processKicks = do
-  WEnv{kickTimeout} <- ask
-  (WPState{pendingKicks},_) <- get
-  curTime <- liftIO getCurrentTime
-  let timeExceeded UserVerificationMessage{timestamp} =
-          floor timeDiff > kickTimeout
-        where
-          timeDiff = curTime `diffUTCTime` timestamp
-      (outdatedKicks, stillPendingKicks) = M.partition timeExceeded pendingKicks
-      spToClear0 :: S.Set (Int, T.Text)
-      spToClear0 = M.keysSet outdatedKicks
-      -- collect users that we want to kick out
-      kickingUsers =
-        M.foldrWithKey
-          (\k UserVerificationMessage{userSet} xs ->
-             ((k,) <$> IS.toList userSet) ++ xs)
-          []
-          outdatedKicks
-  forM_ kickingUsers $ \((_, groupId), userId) ->
-    tryWithTag "KickAttempt" $
-      liftTC $ do
-        -- kick & unban, by doing so users are allowed to re-join
-        _ <- kickChatMemberM groupId userId
-        _ <- unbanChatMemberM groupId userId
-        pure ()
+    WEnv{kickTimeout} <- ask
+    curTime <- liftIO getCurrentTime
+    let timeExceeded UserVerificationMessage{timestamp} =
+            floor timeDiff > kickTimeout
+          where
+            timeDiff = curTime `diffUTCTime` timestamp
+    (WPState{groupStates = gss}, _) <- get
+    let processKicksByGroup :: T.Text -> GroupState -> WowM GroupState
+        processKicksByGroup groupId gs@GroupState{pendingKicks} = do
+          let (outdatedKicks, stillPendingKicks) = IM.partition timeExceeded pendingKicks
+              spToClear0 :: IS.IntSet
+              spToClear0 = IM.keysSet outdatedKicks
+              -- collect users that we want to kick out
+              kickingUsers =
+                IM.foldr
+                  (\UserVerificationMessage{userSet} xs ->
+                     IS.toList userSet ++ xs)
+                []
+                outdatedKicks
+          forM_ kickingUsers $ \userId ->
+            tryWithTag "KickAttempt" $
+              liftTC $ do
+                -- kick & unban, by doing so users are allowed to re-join
+                _ <- kickChatMemberM groupId userId
+                _ <- unbanChatMemberM groupId userId
+                pure ()
+          -- verif messge comes from two places:
+          -- oudated messages(0) + those that no longer contain users(1)
+          let (spToClearPre1, pendingKicks') = IM.partition isEmpty stillPendingKicks
+                where
+                  isEmpty u = IS.null (userSet u)
+              spToClear :: IS.IntSet
+              spToClear = spToClear0 `IS.union` IM.keysSet spToClearPre1
+          -- remove verif messages
+          _ <- tryWithTag "VerifCleanup" $ liftTC $
+            forM (IS.toList spToClear) $ \msgId -> do
+                let req = def
+                          { del_msg_chat_id = ChatId (read (T.unpack groupId))
+                          , del_msg_message_id = msgId
+                          }
+                deleteMessageM req
+          pure gs{pendingKicks = pendingKicks'}
 
-  -- verif messge comes from two places:
-  -- oudated messages(0) + those that no longer contain users(1)
-  let (spToClearPre1, pendingKicks') = M.partition isEmpty stillPendingKicks
-        where
-          isEmpty u = IS.null (userSet u)
-      spToClear :: S.Set (Int, T.Text)
-      spToClear = spToClear0 `S.union` M.keysSet spToClearPre1
-  modify (\(s,rg) ->
-             (s {pendingKicks = pendingKicks'}, rg))
-  -- remove verif messages
-  _ <- tryWithTag "VerifCleanup" $ liftTC $
-    forM (S.toList spToClear) $ \(msgId, groupId) -> do
-      let req = def
-                { del_msg_chat_id = ChatId (read (T.unpack groupId))
-                , del_msg_message_id = msgId
-                }
-      deleteMessageM req
-  pure ()
+    gss' <- M.traverseWithKey processKicksByGroup gss
+    modify (\(s,gs) -> (s{groupStates = gss'}, gs))

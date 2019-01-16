@@ -11,6 +11,7 @@
 module Javran.Wow.Types
   ( UserVerificationMessage(..)
   , WState
+  , GroupState(..)
   , WPState(..)
   , WEnv(..)
   , WowM
@@ -23,6 +24,7 @@ import Web.Telegram.API.Bot
 import Servant.Client
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
+import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import qualified Data.Set as S
 import System.Random
@@ -32,6 +34,9 @@ import Data.Aeson
 import Data.Aeson.Types
 
 deriving instance Eq ChatType
+
+instance Default (IM.IntMap a) where
+  def = mempty
 
 data UserVerificationMessage = UserVerificationMessage
   { timestamp :: UTCTime
@@ -51,23 +56,41 @@ instance FromJSON UserVerificationMessage where
       <*> o .: "user-set"
   parseJSON invalid = typeMismatch "UserVerificationMessage" invalid
 
+-- ignore hlint, we'll have more fields here.
+data GroupState = GroupState
+  { pendingKicks :: IM.IntMap UserVerificationMessage
+  } deriving (Read, Show, Eq, Generic)
+
+instance Default GroupState 
+
+instance FromJSON GroupState where
+  parseJSON (Object o) =
+    GroupState
+      <$> o .: "pending-kicks"
+  parseJSON invalid = typeMismatch "GroupState" invalid      
+
+instance ToJSON GroupState where
+  toJSON GroupState {..} =
+    object [ "pending-kicks" .= pendingKicks
+           ] 
+    
 -- "P" for persistent
 data WPState = WPState
   { lastUpdate :: Maybe Int
-  , pendingKicks :: M.Map (Int, T.Text) UserVerificationMessage
+  , groupStates :: M.Map T.Text GroupState
   } deriving (Read, Show, Eq, Generic)
 
 instance ToJSON WPState where
   toJSON WPState{..} =
     object [ "last-update" .= lastUpdate
-           , "pending-kicks" .= pendingKicks
+           , "group-states" .= groupStates
            ]
 
 instance FromJSON WPState where
   parseJSON (Object o) =
     WPState
       <$> o .:? "last-update"
-      <*> o .: "pending-kicks"
+      <*> o .: "group-states"
   parseJSON invalid = typeMismatch "WPState" invalid
 
 instance Default (M.Map a b) where
@@ -113,7 +136,6 @@ instance FromJSON WEnv where
         <*> o .: "whale-stickers"
   parseJSON invalid = typeMismatch "WEnv" invalid
 
--- TODO: separate group states
 {-
   mechanism for repeater cooldown
 
