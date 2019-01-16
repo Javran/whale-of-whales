@@ -24,6 +24,7 @@ import Servant.Client
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 import qualified Data.IntSet as IS
+import qualified Data.Set as S
 import System.Random
 import Data.Default.Class
 import GHC.Generics
@@ -83,7 +84,7 @@ data WEnv = WEnv
   , kickTimeout :: Int
   , logFile :: FilePath
   , stateFile :: FilePath
-  , watchingGroups :: [Int64]
+  , watchingGroups :: S.Set Int64
   , whaleStickers :: [T.Text]
   } deriving (Generic)
 
