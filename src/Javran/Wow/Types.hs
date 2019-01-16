@@ -65,6 +65,7 @@ data GroupState = GroupState
     -- INVARIANT:
     -- - must be sorted in descending order of UTCTime
   , repeaterDigest :: [(UTCTime, (Int, RepeatDigest))]
+  , repeaterCooldown :: M.Map RepeatDigest UTCTime
   } deriving (Read, Show, Eq, Generic)
 
 instance Default GroupState 
@@ -74,12 +75,14 @@ instance FromJSON GroupState where
     GroupState
       <$> o .: "pending-kicks"
       <*> o .: "repeater-digest"
+      <*> o .: "repeater-cooldown"
   parseJSON invalid = typeMismatch "GroupState" invalid      
 
 instance ToJSON GroupState where
   toJSON GroupState {..} =
     object [ "pending-kicks" .= pendingKicks
            , "repeater-digest" .= repeaterDigest
+           , "repeater-cooldown" .= repeaterCooldown
            ]
     
 -- "P" for persistent
@@ -118,6 +121,7 @@ data WEnv = WEnv
   , watchingGroups :: S.Set Int64
   , whaleStickers :: [T.Text]
   , repeatCooldown :: Int
+  , repeatWindow :: Int
   } deriving (Generic)
 
 instance ToJSON WEnv where
@@ -130,6 +134,7 @@ instance ToJSON WEnv where
              , "watching-groups" .= watchingGroups
              , "whale-stickers" .= whaleStickers
              , "repeat-cooldown" .= repeatCooldown
+             , "repeat-window" .= repeatWindow
              ]
     where
       Token botTokStr = botToken
@@ -145,6 +150,7 @@ instance FromJSON WEnv where
         <*> o .: "watching-groups"
         <*> o .: "whale-stickers"
         <*> o .: "repeat-cooldown"
+        <*> o .: "repeat-window"
   parseJSON invalid = typeMismatch "WEnv" invalid
 
 {-
@@ -175,17 +181,21 @@ instance FromJSON WEnv where
 data RepeatDigest
   = RepeatMessageDigest T.Text -- ^ sanitized message
   | RepeatStickerDigest T.Text -- ^ sticker, payload should be a valid file id
-    deriving (Read, Show, Eq)
+    deriving (Read, Show, Eq, Ord)
 
 instance ToJSON RepeatDigest where
   toJSON = \case
     RepeatMessageDigest x -> String ("msg:" <> x)
     RepeatStickerDigest x -> String ("stk:" <> x)
 
+instance ToJSONKey RepeatDigest
+
 instance FromJSON RepeatDigest where
   parseJSON = withText "RepeatDigest" $ \x ->
     if | "msg:" `T.isPrefixOf` x -> pure (RepeatMessageDigest x)
        | "stk:" `T.isPrefixOf` x -> pure (RepeatStickerDigest x)
        | otherwise -> fail "unrecognized text"
+
+instance FromJSONKey RepeatDigest
 
 type WowM a = RWST WEnv () WState ClientM a

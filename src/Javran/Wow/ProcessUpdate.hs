@@ -84,24 +84,33 @@ updateToRepeatDigest upd
           pure (curTime, (user_id, RepeatStickerDigest sticker_file_id))
         _ -> Nothing
   | otherwise = Nothing
-       
 
 -- should only call this function when
 -- we have a sticker or text message
 processRepeater :: T.Text -> Update -> WowM ()
 processRepeater groupId upd
-  | Just digest@(curTime, (userId, rd)) <- updateToRepeatDigest upd
+  | Just digest@(curTime, (_, rd)) <- updateToRepeatDigest upd
   = do
-    -- remove outdated cooldowns and add new digest
-    -- TODO: we should really use repeat window here instead of cooldown.
+
+    window <- asks repeatWindow
     cd <- asks repeatCooldown
     let timeCut =
           -- conversion will consider UTCTime to be seconds.
-          takeWhile (\(t, _) -> floor (curTime `diffUTCTime` t) <= cd)
+          takeWhile (\(t, _) -> floor (curTime `diffUTCTime` t) <= window)
+        updateRcd =
+          M.filter (\t -> floor (curTime `diffUTCTime` t) <= cd)
+    -- + remove outdated message digests (by cutting at time window)
+    -- + remove expired cooldown
     modifyGroupState groupId $
-      \gs@GroupState{repeaterDigest = rds} ->
-        gs {repeaterDigest = digest:timeCut rds}
-    GroupState{repeaterDigest=newRds} <- getGroupState groupId
+      \gs@GroupState{repeaterDigest = rds, repeaterCooldown = rcd} ->
+        gs { repeaterDigest = digest:timeCut rds
+           , repeaterCooldown = updateRcd rcd
+           }
+    GroupState
+      { repeaterDigest = newRds
+      , repeaterCooldown = newCds
+      } <- getGroupState groupId
+
     let distinctUserCount =
               IS.size
             . foldMap (\(_, (u, rd')) ->
@@ -109,9 +118,15 @@ processRepeater groupId upd
                             then IS.singleton u
                             else IS.empty)
             $ newRds
-    when (distinctUserCount >= 2) $ do
+    when (rd `M.member` newCds) $ liftIO $ putStrLn "no repeat due to cooldown"
+    when ((rd `M.notMember` newCds) && distinctUserCount >= 2) $ do
       -- now we should repeat
       liftIO $ putStrLn "now we should repeat"
+      -- TODO: send the actual message
+      modifyGroupState groupId $
+        \gs@GroupState{repeaterCooldown = rcd} ->
+          gs {repeaterCooldown = M.insert rd curTime rcd}
+      
   | otherwise = pure ()
 
 {-

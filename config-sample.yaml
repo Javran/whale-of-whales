@@ -13,4 +13,6 @@ whale-stickers: []
 # chatId of groups that the bot should respond to
 watching-groups: []
 # repeat cooldown in seconds
-repeat-cooldown: 300
+repeat-cooldown: 30
+# watching window of the repeater in seconds
+repeat-window: 300
