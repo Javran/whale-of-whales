@@ -192,8 +192,8 @@ instance ToJSONKey RepeatDigest
 
 instance FromJSON RepeatDigest where
   parseJSON = withText "RepeatDigest" $ \x ->
-    if | "msg:" `T.isPrefixOf` x -> pure (RepeatMessageDigest x)
-       | "stk:" `T.isPrefixOf` x -> pure (RepeatStickerDigest x)
+    if | "msg:" `T.isPrefixOf` x -> pure (RepeatMessageDigest $ T.drop 4 x)
+       | "stk:" `T.isPrefixOf` x -> pure (RepeatStickerDigest $ T.drop 4 x)
        | otherwise -> fail "unrecognized text"
 
 instance FromJSONKey RepeatDigest
