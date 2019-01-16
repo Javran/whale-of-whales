@@ -19,17 +19,23 @@ import Data.String
 import Control.Monad.RWS
 import Web.Telegram.API.Bot
 import Data.Time
+import Data.Char
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import qualified Data.Set as S
 import Data.Maybe
+import Data.Int
 
 import Javran.Wow.Types
 import Javran.Wow.Base
 import Javran.Wow.Default ()
 import Data.Default.Class
+import Data.Time.Clock.POSIX
+
+int64ToT :: Int64 -> T.Text
+int64ToT = T.pack . show
 
 bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do
@@ -57,6 +63,56 @@ modifyGroupState chatId f =
   where
     f' Nothing = Just (f def)
     f' (Just x) = Just (f x)
+
+updateToRepeatDigest :: Update -> Maybe (UTCTime, (Int, RepeatDigest))
+updateToRepeatDigest upd
+  | Update
+    { message =
+        Just msg@Message
+        { date
+        , from = Just User {user_id}
+        }
+    } <- upd
+  = do
+      let curTime :: UTCTime
+          curTime = posixSecondsToUTCTime (fromIntegral date)
+      case msg of
+        Message {text = Just txt} ->
+          let dg = T.filter (\x -> isPrint x && not (isSpace x)) txt
+          in pure (curTime, (user_id, RepeatMessageDigest dg))
+        Message {sticker = Just Sticker {sticker_file_id}} ->
+          pure (curTime, (user_id, RepeatStickerDigest sticker_file_id))
+        _ -> Nothing
+  | otherwise = Nothing
+       
+
+-- should only call this function when
+-- we have a sticker or text message
+processRepeater :: T.Text -> Update -> WowM ()
+processRepeater groupId upd
+  | Just digest@(curTime, (userId, rd)) <- updateToRepeatDigest upd
+  = do
+    -- remove outdated cooldowns and add new digest
+    -- TODO: we should really use repeat window here instead of cooldown.
+    cd <- asks repeatCooldown
+    let timeCut =
+          -- conversion will consider UTCTime to be seconds.
+          takeWhile (\(t, _) -> floor (curTime `diffUTCTime` t) <= cd)
+    modifyGroupState groupId $
+      \gs@GroupState{repeaterDigest = rds} ->
+        gs {repeaterDigest = digest:timeCut rds}
+    GroupState{repeaterDigest=newRds} <- getGroupState groupId
+    let distinctUserCount =
+              IS.size
+            . foldMap (\(_, (u, rd')) ->
+                          if rd == rd'
+                            then IS.singleton u
+                            else IS.empty)
+            $ newRds
+    when (distinctUserCount >= 2) $ do
+      -- now we should repeat
+      liftIO $ putStrLn "now we should repeat"
+  | otherwise = pure ()
 
 {-
 
@@ -174,15 +230,17 @@ processUpdate upd@Update{..} = do
         }
         | shouldProcess chat_id -> do
           liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
-          liftIO $ putStrLn $ "[sticker] " ++ show upd          
+          liftIO $ putStrLn $ "[sticker] " ++ show upd
+          processRepeater (int64ToT chat_id) upd
       Update
         { message =
             Just Message
                  { chat = Chat {chat_id = ci}
                  }
         }
-        | shouldProcess ci ->
+        | shouldProcess ci -> do
           liftIO $ putStrLn $ "[msg] " ++ show upd
+          processRepeater (int64ToT ci) upd
       _ -> do
         let dbg = False
         when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
@@ -224,7 +282,7 @@ processUpdate upd@Update{..} = do
                   where
                     uvm = UserVerificationMessage
                           { timestamp
-                            , userSet = IS.fromList (user_id <$> users)
+                          , userSet = IS.fromList (user_id <$> users)
                           }
             modifyGroupState curGroupId modifyKick
 
@@ -241,7 +299,7 @@ processKicks = do
     let processKicksByGroup :: T.Text -> GroupState -> WowM GroupState
         processKicksByGroup groupId gs@GroupState{pendingKicks} = do
           let (outdatedKicks, stillPendingKicks) = IM.partition timeExceeded pendingKicks
-              -- collect verif message ids 
+              -- collect verif message ids
               spToClear0 :: IS.IntSet
               spToClear0 = IM.keysSet outdatedKicks
               -- collect users that we want to kick out

@@ -6,6 +6,8 @@
   , DeriveGeneric
   , RecordWildCards
   , OverloadedStrings
+  , LambdaCase
+  , MultiWayIf
   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Javran.Wow.Types
@@ -14,6 +16,7 @@ module Javran.Wow.Types
   , GroupState(..)
   , WPState(..)
   , WEnv(..)
+  , RepeatDigest(..)
   , WowM
   ) where
 
@@ -56,9 +59,12 @@ instance FromJSON UserVerificationMessage where
       <*> o .: "user-set"
   parseJSON invalid = typeMismatch "UserVerificationMessage" invalid
 
--- ignore hlint, we'll have more fields here.
 data GroupState = GroupState
   { pendingKicks :: IM.IntMap UserVerificationMessage
+    -- element is: (<time>, (<user id>, <RepeatDigest>))
+    -- INVARIANT:
+    -- - must be sorted in descending order of UTCTime
+  , repeaterDigest :: [(UTCTime, (Int, RepeatDigest))]
   } deriving (Read, Show, Eq, Generic)
 
 instance Default GroupState 
@@ -67,12 +73,14 @@ instance FromJSON GroupState where
   parseJSON (Object o) =
     GroupState
       <$> o .: "pending-kicks"
+      <*> o .: "repeater-digest"
   parseJSON invalid = typeMismatch "GroupState" invalid      
 
 instance ToJSON GroupState where
   toJSON GroupState {..} =
     object [ "pending-kicks" .= pendingKicks
-           ] 
+           , "repeater-digest" .= repeaterDigest
+           ]
     
 -- "P" for persistent
 data WPState = WPState
@@ -109,6 +117,7 @@ data WEnv = WEnv
   , stateFile :: FilePath
   , watchingGroups :: S.Set Int64
   , whaleStickers :: [T.Text]
+  , repeatCooldown :: Int
   } deriving (Generic)
 
 instance ToJSON WEnv where
@@ -120,6 +129,7 @@ instance ToJSON WEnv where
              , "state-file" .= stateFile
              , "watching-groups" .= watchingGroups
              , "whale-stickers" .= whaleStickers
+             , "repeat-cooldown" .= repeatCooldown
              ]
     where
       Token botTokStr = botToken
@@ -134,6 +144,7 @@ instance FromJSON WEnv where
         <*> o .: "state-file"
         <*> o .: "watching-groups"
         <*> o .: "whale-stickers"
+        <*> o .: "repeat-cooldown"
   parseJSON invalid = typeMismatch "WEnv" invalid
 
 {-
@@ -162,7 +173,19 @@ instance FromJSON WEnv where
 
  -}
 data RepeatDigest
-  = RepeatMesssageDigest T.Text -- ^ sanitized message
+  = RepeatMessageDigest T.Text -- ^ sanitized message
   | RepeatStickerDigest T.Text -- ^ sticker, payload should be a valid file id
+    deriving (Read, Show, Eq)
+
+instance ToJSON RepeatDigest where
+  toJSON = \case
+    RepeatMessageDigest x -> String ("msg:" <> x)
+    RepeatStickerDigest x -> String ("stk:" <> x)
+
+instance FromJSON RepeatDigest where
+  parseJSON = withText "RepeatDigest" $ \x ->
+    if | "msg:" `T.isPrefixOf` x -> pure (RepeatMessageDigest x)
+       | "stk:" `T.isPrefixOf` x -> pure (RepeatStickerDigest x)
+       | otherwise -> fail "unrecognized text"
 
 type WowM a = RWST WEnv () WState ClientM a
