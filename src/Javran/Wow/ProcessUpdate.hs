@@ -134,7 +134,7 @@ processRepeater groupId upd
       let Update
             { message = Just msg@Message{forward_from_chat, message_id}
             } = upd
-          chatId = ChatId (read (T.unpack groupId))            
+          chatId = ChatId (read (T.unpack groupId))
       case forward_from_chat of
         Just _ -> do
           -- forward the message
@@ -170,11 +170,55 @@ processRepeater groupId upd
                           }
               _ <- tryWithTag "RepeatSticker" $ liftTC (sendStickerM req)
               pure ()
-              
+
       modifyGroupState groupId $
         \gs@GroupState{repeaterCooldown = rcd} ->
           gs {repeaterCooldown = M.insert rd curTime rcd}
-      
+
+  | otherwise = pure ()
+
+userDesc :: User -> T.Text
+userDesc User{..} =
+    if T.length lastName > 0
+      then firstName <> " " <> lastName
+      else firstName
+  where
+    firstName = user_first_name
+    lastName = fromMaybe T.empty user_last_name
+
+yesMessages :: [[T.Text]]
+yesMessages =
+    [ ["说", "书", "舒"]
+    , ["的", "得", "地"]
+    , ["对", "队", "兑"]
+    ]
+
+noMessages :: [[T.Text]]
+noMessages =
+    [ ["说", "书", "舒"]
+    , ["的", "得", "地"]
+    , ["不", "卜", "部"]    
+    , ["对", "队", "兑"]
+    ]
+
+processYorN :: Bool -> Update -> WowM ()
+processYorN isYes upd
+  | Update
+      { message = Just msg@Message {chat = Chat {chat_id}}
+      } <- upd
+  , Message
+      { text = Just content
+      , from = Just user
+      } <- msg
+  , T.length content > 2
+  = do
+      let who = userDesc user
+      rndMsg <- T.concat <$> mapM pickM (if isYes then yesMessages else noMessages)
+      let req = def { message_chat_id = ChatId chat_id
+                    , message_text = who <> rndMsg <> "!"
+                    }
+      _ <- tryWithTag "YorN" $ liftTC $ sendMessageM req
+      pure ()
   | otherwise = pure ()
 
 processUpdate :: Update -> WowM ()
@@ -205,6 +249,8 @@ processUpdate upd@Update{..} = do
             case cmd of
               "/whale" -> sendWhale
               "/whales" -> sendWhale
+              "/y" -> processYorN True  upd
+              "/n" -> processYorN False upd
               _ -> liftIO $ putStrLn $ "unrecognized command: " ++ T.unpack cmd
       Update
         { callback_query =
