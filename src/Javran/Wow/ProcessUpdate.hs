@@ -132,10 +132,10 @@ processRepeater groupId upd
     when ((rd `M.notMember` newCds) && distinctUserCount >= 2) $ do
       -- now we should repeat
       let Update
-            { message = Just msg@Message{forward_from_chat, message_id}
+            { message = Just msg@Message{forward_from, message_id}
             } = upd
           chatId = ChatId (read (T.unpack groupId))
-      case forward_from_chat of
+      case forward_from of
         Just _ -> do
           -- forward the message
           -- for reasons we shouldn't forward from original message,
