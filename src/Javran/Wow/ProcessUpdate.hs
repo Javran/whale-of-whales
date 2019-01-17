@@ -122,32 +122,46 @@ processRepeater groupId upd
       liftIO $ putStrLn "no repeat due to cooldown"
     when ((rd `M.notMember` newCds) && distinctUserCount >= 2) $ do
       -- now we should repeat
-      liftIO $ putStrLn "repeat."
       let Update
-            { message = Just Message{forward_from_chat, message_id}
+            { message = Just msg@Message{forward_from_chat, message_id}
             } = upd
+          chatId = ChatId (read (T.unpack groupId))            
       case forward_from_chat of
         Just _ -> do
-          liftIO $ putStrLn "forward"
           -- forward the message
           -- for reasons we shouldn't forward from original message,
           -- (which will result in "message not found" error, flippng great design choice.)
           -- but from the message we are dealing with.
-          let chatId = ChatId (read (T.unpack groupId))
-              req = ForwardMessageRequest
+          let req = ForwardMessageRequest
                       { forward_chat_id = chatId
                       , forward_from_chat_id = chatId
                       , forward_disable_notification = Nothing
                       , forward_message_id = message_id
                       }
-          a <- tryWithTag "RepeaterForward" $ liftTC (forwardMessageM req)
+          _ <- tryWithTag "RepeatForward" $ liftTC (forwardMessageM req)
           pure ()
-        _ -> do
-          -- send text or sticker
-          liftIO $ putStrLn "send text or sticker"          
-          pure ()
-
-      -- TODO: send the actual message
+        _ ->
+          case rd of
+            RepeatMessageDigest {} -> do
+              let Message {text = Just content} = msg
+                  req = def
+                          { message_chat_id = chatId
+                          , message_text = content
+                          }
+              _ <- tryWithTag "RepeatText" $ liftTC (sendMessageM req)
+              pure ()
+            RepeatStickerDigest {} -> do
+              let Message {sticker = Just Sticker{sticker_file_id}} = msg
+                  req = SendStickerRequest
+                          { sticker_chat_id = chatId
+                          , sticker_sticker = sticker_file_id
+                          , sticker_disable_notification = def
+                          , sticker_reply_to_message_id = def
+                          , sticker_reply_markup = def
+                          }
+              _ <- tryWithTag "RepeatSticker" $ liftTC (sendStickerM req)
+              pure ()
+              
       modifyGroupState groupId $
         \gs@GroupState{repeaterCooldown = rcd} ->
           gs {repeaterCooldown = M.insert rd curTime rcd}
