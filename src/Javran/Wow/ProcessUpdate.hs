@@ -24,7 +24,6 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import qualified Data.Set as S
 import Data.Maybe
 import Data.Int
 
@@ -196,12 +195,11 @@ processUpdate upd@Update{..} = do
         , Just cmd <- extractBotCommand msg -> do
             let sendWhale = do
                   WEnv {whaleStickers} <- ask
-                  let l = length whaleStickers
-                  ind <- genNextRM (0, l-1)
+                  whaleSticker <- pickM whaleStickers
                   _ <- tryWithTag "Whale" $ liftTC $
                     sendStickerM ((def @(SendStickerRequest T.Text))
                                       { sticker_chat_id = ChatId chat_id
-                                      , sticker_sticker = whaleStickers !! ind :: T.Text
+                                      , sticker_sticker = whaleSticker :: T.Text
                                       })
                   pure ()
             case cmd of

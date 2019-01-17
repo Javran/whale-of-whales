@@ -14,6 +14,7 @@ module Javran.Wow.Base
   , tryWithTag
   , genNextM
   , genNextRM
+  , pickM
   , loadState
   , saveState
   , getWEnv
@@ -73,6 +74,14 @@ genNextRM range = do
     let (r, rGen') = randomR range rGen
     modify (\(p, _) -> (p, rGen'))
     pure r
+
+-- randomly pick one, must not be empty
+pickM :: [a] -> WowM a
+pickM [] = fail "pickM: empty list"
+pickM xs = do
+    let l = length xs
+    ind <- genNextRM (0, l-1)
+    pure $ xs !! ind
 
 logM :: String -> WowM ()
 logM msg = asks logFile >>= \fp -> liftIO (appendLogTo fp msg)
