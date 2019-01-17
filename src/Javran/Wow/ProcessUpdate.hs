@@ -85,6 +85,16 @@ updateToRepeatDigest upd
         _ -> Nothing
   | otherwise = Nothing
 
+{-
+  Repeater Design:
+
+  - remove outdated repeaterdata when start processing message
+  - recognize repeated message (it make sense that we only look at current message
+    and find previous messages that is the same, or almost the same)
+  - do the repeating and move message into cooldown
+
+  -}
+
 -- should only call this function when
 -- we have a sticker or text message
 processRepeater :: T.Text -> Update -> WowM ()
@@ -168,39 +178,6 @@ processRepeater groupId upd
       
   | otherwise = pure ()
 
-{-
-
-  TODO: impl repeater
-
-  idea:
-
-  - time window (say 10 mins, config)
-  - after 2 "same message" are posted
-    + in this time window
-    + ideally we only process non-empty messages after ignoring punctuation
-    + but if there's nothing but space and other punctuations, we just ignore spaces
-      (for dealing with emoji I guess)
-    + message must be from at least 2 distinct user
-      - excluding bots
-      - ignore punctuation (if there's a way to do that)
-      - message should not have been repeated yet, which means they are in cooldown.
-    + repeat the message and enter cooldown for that message
-    + all these parameters are kinda random, let's tune them at runtime once impl-ed.
-    + cooldown duration = time window
-
-  impl detail:
-
-  - RepeaterData :: Map GroupId RepeaterGroupData
-  - RepeaterGroupData {
-      messageSeq :: [(Message, Timestamp)] -- should be in process order
-      cooldownMessages :: Map Message Timestamp
-    }
-  - remove outdated repeaterdata when start processing message
-  - recognize repeated message (it make sense that we only look at current message
-    and find previous messages that is the same)
-  - do the repeating and move message into cooldown
-
-  -}
 processUpdate :: Update -> WowM ()
 processUpdate upd@Update{..} = do
     -- we should only handle messages coming from pre-defined chats.
