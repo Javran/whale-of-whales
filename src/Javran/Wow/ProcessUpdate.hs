@@ -118,10 +118,35 @@ processRepeater groupId upd
                             then IS.singleton u
                             else IS.empty)
             $ newRds
-    when (rd `M.member` newCds) $ liftIO $ putStrLn "no repeat due to cooldown"
+    when (rd `M.member` newCds) $
+      liftIO $ putStrLn "no repeat due to cooldown"
     when ((rd `M.notMember` newCds) && distinctUserCount >= 2) $ do
       -- now we should repeat
-      liftIO $ putStrLn "now we should repeat"
+      liftIO $ putStrLn "repeat."
+      let Update
+            { message = Just Message{forward_from_chat, message_id}
+            } = upd
+      case forward_from_chat of
+        Just _ -> do
+          liftIO $ putStrLn "forward"
+          -- forward the message
+          -- for reasons we shouldn't forward from original message,
+          -- (which will result in "message not found" error, flippng great design choice.)
+          -- but from the message we are dealing with.
+          let chatId = ChatId (read (T.unpack groupId))
+              req = ForwardMessageRequest
+                      { forward_chat_id = chatId
+                      , forward_from_chat_id = chatId
+                      , forward_disable_notification = Nothing
+                      , forward_message_id = message_id
+                      }
+          a <- tryWithTag "RepeaterForward" $ liftTC (forwardMessageM req)
+          pure ()
+        _ -> do
+          -- send text or sticker
+          liftIO $ putStrLn "send text or sticker"          
+          pure ()
+
       -- TODO: send the actual message
       modifyGroupState groupId $
         \gs@GroupState{repeaterCooldown = rcd} ->
