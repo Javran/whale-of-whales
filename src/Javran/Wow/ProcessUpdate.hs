@@ -129,7 +129,7 @@ processRepeater groupId upd
             $ newRds
     when (rd `M.member` newCds) $
       liftIO $ putStrLn "no repeat due to cooldown"
-    when ((rd `M.notMember` newCds) && distinctUserCount >= 2) $ do
+    when ((rd `M.notMember` newCds) && distinctUserCount >= 3) $ do
       -- now we should repeat
       let Update
             { message = Just msg@Message{forward_from, message_id}
