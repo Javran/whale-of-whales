@@ -4,7 +4,6 @@
   , OverloadedStrings
   , MultiWayIf
   , ScopedTypeVariables
-  , TupleSections
   , TypeApplications
   #-}
 module Javran.Wow.ProcessUpdate
@@ -33,8 +32,30 @@ import Javran.Wow.Default ()
 import Data.Default.Class
 import Data.Time.Clock.POSIX
 
+import Text.ParserCombinators.ReadP hiding (get)
+
 int64ToT :: Int64 -> T.Text
 int64ToT = T.pack . show
+
+isWhaleCommand :: T.Text -> Bool
+isWhaleCommand inp = case readP_to_S pWhale (T.unpack inp) of
+    [(_,"")] -> True
+    _ -> False
+  where
+    {-
+      examples:
+
+      - /whale
+      - /whales
+      - /wwwwwwwhales
+      - /wwwwhales
+     -}
+    pWhale =
+      char '/' *>
+      munch1 (== 'w') *>
+      string "hale" *>
+      optional (char 's') *>
+      eof
 
 bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do
@@ -247,8 +268,7 @@ processUpdate upd@Update{..} = do
                                       })
                   pure ()
             case cmd of
-              "/whale" -> sendWhale
-              "/whales" -> sendWhale
+              _ | isWhaleCommand cmd -> sendWhale
               "/y" -> processYorN True  upd
               "/n" -> processYorN False upd
               _ -> liftIO $ putStrLn $ "unrecognized command: " ++ T.unpack cmd
