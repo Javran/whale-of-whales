@@ -8,22 +8,11 @@ module Javran.Wow.BotModule.UserVerification
   ( UserVerification
   ) where
 
-import Data.Int
-  ( Int64
-  )
+import Data.Int (Int64)
 import Control.Monad.RWS
-import Data.Maybe
-  ( fromMaybe
-  )
-import Data.String
-  ( fromString
-  )
-import Data.Time.Clock.POSIX
-  ( getCurrentTime
-  )
-import Data.Time
-  ( diffUTCTime
-  )
+import Data.Maybe (fromMaybe)
+import Data.Time.Clock.POSIX (getCurrentTime)
+import Data.Time (diffUTCTime)
 import Data.Default.Class
 import Web.Telegram.API.Bot
 
@@ -34,6 +23,7 @@ import qualified Data.IntSet as IS
 
 import Javran.Wow.Types
 import Javran.Wow.Base
+import Javran.Wow.Util
 import Javran.Wow.Default ()
 
 data UserVerification
@@ -97,7 +87,7 @@ processNewMembers msgId chatId usersInp = do
 processUserAction :: CallbackQuery -> WowM ()
 processUserAction = \case
     CallbackQuery
-        { cq_from = User {user_id, user_username}
+        { cq_from = user@User {user_id}
         , cq_message = Just Message {message_id, chat = Chat {chat_id}}
         , cq_id
         } -> do
@@ -118,11 +108,9 @@ processUserAction = \case
                          modifyKick gs@GroupState {pendingKicks = pks'} =
                            gs {pendingKicks = IM.adjust modifyUVM message_id pks'}
                      modifyGroupState curChatId modifyKick
-                     let welcomeMsg = case user_username of
-                             Just u -> "欢迎" <> u <> "!"
-                             Nothing -> "欢迎" <> fromString (show user_id) <> "!"
+                     let who = userDesc user
                          req = def { message_chat_id = ChatId chat_id
-                                   , message_text = welcomeMsg
+                                   , message_text = "欢迎 " <> who <> " !"
                                    }
                      _ <- tryWithTag "VerifSayHi" $ liftTC $ sendMessageM req
                      pure ()

@@ -19,15 +19,6 @@ import Javran.Wow.Base
 
 data SendYesOrNo
 
-userDesc :: User -> T.Text
-userDesc User{..} =
-    if T.length lastName > 0
-      then firstName <> " " <> lastName
-      else firstName
-  where
-    firstName = user_first_name
-    lastName = fromMaybe T.empty user_last_name
-
 yesMessages :: [[T.Text]]
 yesMessages =
     [ ["说", "书", "舒"]
