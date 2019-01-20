@@ -64,12 +64,14 @@ isWhaleCommand inp = case readP_to_S pWhale (T.unpack inp) of
 startBot :: WEnv -> Int -> IO ()
 startBot wenv@WEnv{..} = fix $ \r errCount ->
     if errCount < 10
-      then catch (forever run) errHandler >> r (succ errCount)
+      then
+        putStrLn ("Starting bot at attempt #" ++ show errCount) >>
+        catch (forever run) errHandler >> r (succ errCount)
       else putStrLn "Too many errors, aborting."
   where
     run :: IO ()
     run = do
-      putStrLn "bot started"
+      putStrLn "Bot started"
       mgr <- newManager tlsManagerSettings
       initState <- loadState stateFile
       void $ runWowM wenv initState mgr $ do
@@ -98,7 +100,6 @@ startBot wenv@WEnv{..} = fix $ \r errCount ->
     errHandler e =
       appendLogTo logFile $
         "Exception caught: " ++ displayException e
-
 
 bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do
