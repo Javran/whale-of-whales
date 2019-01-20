@@ -29,6 +29,7 @@ executable wow
               , Javran.Wow.Util
               , Javran.Wow.ProcessUpdate
               , Javran.Wow.BotModule.UserVerification
+              , Javran.Wow.BotModule.SendWhale
               , Javran.Wow.BotModule.CommandSink
   build-depends:
                 base

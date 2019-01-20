@@ -4,7 +4,6 @@
   , OverloadedStrings
   , MultiWayIf
   , ScopedTypeVariables
-  , TypeApplications
   , LambdaCase
   , ExistentialQuantification
   #-}
@@ -39,8 +38,8 @@ import Network.HTTP.Client (newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Data.Proxy
 
-import Text.ParserCombinators.ReadP hiding (get)
 import Javran.Wow.BotModule.UserVerification (UserVerification)
+import Javran.Wow.BotModule.SendWhale (SendWhale)
 import Javran.Wow.BotModule.CommandSink (CommandSink)
 
 data BMod = forall bm. BotModule bm => BMod (Proxy bm)
@@ -50,6 +49,7 @@ data BMod = forall bm. BotModule bm => BMod (Proxy bm)
 botMods :: [BMod]
 botMods =
     [ BMod (Proxy :: Proxy UserVerification)
+    , BMod (Proxy :: Proxy SendWhale)
       -- NOTE: CommandSink consumes all commands,
       -- no bot command modules should be placed after it.
     , BMod (Proxy :: Proxy CommandSink)
@@ -57,26 +57,6 @@ botMods =
 
 int64ToT :: Int64 -> T.Text
 int64ToT = T.pack . show
-
-isWhaleCommand :: T.Text -> Bool
-isWhaleCommand inp = case readP_to_S pWhale (T.unpack inp) of
-    [(_,"")] -> True
-    _ -> False
-  where
-    {-
-      examples:
-
-      - /whale
-      - /whales
-      - /wwwwwwwhales
-      - /wwwwhales
-     -}
-    pWhale =
-      char '/' *>
-      munch1 (== 'w') *>
-      string "hale" *>
-      optional (char 's') *>
-      eof
 
 startBot :: WEnv -> Int -> IO ()
 startBot wenv@WEnv{..} = fix $ \r errCount ->
@@ -329,22 +309,10 @@ processUpdate upd@Update{..} = do
       case upd of
         Update
           { message =
-              Just msg@Message
-                { chat = Chat {chat_id}
-                }
+              Just msg
           }
-          | Just cmd <- extractBotCommand msg, not processed -> do
-            let sendWhale = do
-                  WEnv {whaleStickers} <- ask
-                  whaleSticker <- pickM whaleStickers
-                  _ <- tryWithTag "Whale" $ liftTC $
-                    sendStickerM ((def @(SendStickerRequest T.Text))
-                                      { sticker_chat_id = ChatId chat_id
-                                      , sticker_sticker = whaleSticker :: T.Text
-                                      })
-                  pure ()
+          | Just cmd <- extractBotCommand msg, not processed ->
             case cmd of
-              _ | isWhaleCommand cmd -> sendWhale
               "/y" -> processYorN True  upd
               "/n" -> processYorN False upd
               _ -> pure () -- should have been processed
