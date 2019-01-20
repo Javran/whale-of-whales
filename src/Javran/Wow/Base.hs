@@ -18,6 +18,8 @@ module Javran.Wow.Base
   , loadState
   , saveState
   , getWEnv
+  , getGroupState
+  , modifyGroupState
   ) where
 
 import Data.Time
@@ -34,6 +36,9 @@ import Network.HTTP.Client (Manager)
 import Data.Default.Class
 import qualified Data.Yaml as Yaml
 import Data.List
+import Data.Maybe
+import qualified Data.Text as T
+import qualified Data.Map.Strict as M
 
 import Javran.Wow.Types
 
@@ -94,6 +99,17 @@ appendLogTo logPath msg = do
         header = "[" <> dateStr <> " " <> timeStr <> "]"
     appendFile logPath (header <> " " <> msg <> "\n")
 
+getGroupState :: T.Text -> WowM GroupState
+getGroupState chatId =
+  gets $ fromMaybe def . M.lookup chatId . groupStates . fst
+
+modifyGroupState :: T.Text -> (GroupState -> GroupState) -> WowM ()
+modifyGroupState chatId f =
+    modify (\(s@WPState{groupStates = gss},rg) ->
+              (s {groupStates = M.alter f' chatId gss}, rg))
+  where
+    f' Nothing = Just (f def)
+    f' (Just x) = Just (f x)
 
 -- stolen from:
 -- https://github.com/snoyberg/yaml/blob/35f0286d83acf6c27e00cf8edbfc43c841109760/yaml/test/Data/Yaml/IncludeSpec.hs#L131-L134
@@ -111,7 +127,7 @@ loadState fp =
       ps <- Yaml.decodeFileThrow fp
       g <- newStdGen
       pure (ps,g)
-    
+
     errHandler :: SomeException -> IO WState
     errHandler e
       | Just pe <- fromException @Yaml.ParseException e

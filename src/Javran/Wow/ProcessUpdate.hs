@@ -24,7 +24,6 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.IntSet as IS
-import Data.Maybe
 import Data.Int
 import Control.Exception
 
@@ -53,7 +52,7 @@ botMods =
     , BMod (Proxy :: Proxy SendYesOrNo)
       -- NOTE: CommandSink consumes all commands,
       -- no bot command modules should be placed after it.
-    -- , BMod (Proxy :: Proxy CommandSink)
+    , BMod (Proxy :: Proxy CommandSink)
     ]
 
 int64ToT :: Int64 -> T.Text
@@ -106,17 +105,6 @@ bumpLastSeen Update{..} = do
     modify (\(s@WPState{lastUpdate},rg) ->
               (s {lastUpdate = maybe (Just update_id) updF lastUpdate}, rg))
 
-getGroupState :: T.Text -> WowM GroupState
-getGroupState chatId =
-  gets $ fromMaybe def . M.lookup chatId . groupStates . fst
-
-modifyGroupState :: T.Text -> (GroupState -> GroupState) -> WowM ()
-modifyGroupState chatId f =
-    modify (\(s@WPState{groupStates = gss},rg) ->
-              (s {groupStates = M.alter f' chatId gss}, rg))
-  where
-    f' Nothing = Just (f def)
-    f' (Just x) = Just (f x)
 
 updateToRepeatDigest :: Update -> Maybe (UTCTime, (Int, RepeatDigest))
 updateToRepeatDigest upd

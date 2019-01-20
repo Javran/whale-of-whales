@@ -10,7 +10,6 @@ module Javran.Wow.BotModule.UserVerification
 
 import Data.Int (Int64)
 import Control.Monad.RWS
-import Data.Maybe (fromMaybe)
 import Data.Time.Clock.POSIX (getCurrentTime)
 import Data.Time (diffUTCTime)
 import Data.Default.Class
@@ -27,18 +26,6 @@ import Javran.Wow.Util
 import Javran.Wow.Default ()
 
 data UserVerification
-
-getGroupState :: T.Text -> WowM GroupState
-getGroupState chatId =
-  gets $ fromMaybe def . M.lookup chatId . groupStates . fst
-
-modifyGroupState :: T.Text -> (GroupState -> GroupState) -> WowM ()
-modifyGroupState chatId f =
-    modify (\(s@WPState{groupStates = gss},rg) ->
-              (s {groupStates = M.alter f' chatId gss}, rg))
-  where
-    f' Nothing = Just (f def)
-    f' (Just x) = Just (f x)
 
 -- for every new chat member joining, we send out a message to initiate verification
 processNewMembers :: Int -> Int64 -> [User] -> WowM ()
