@@ -8,6 +8,7 @@
   , OverloadedStrings
   , LambdaCase
   , MultiWayIf
+  , FlexibleInstances
   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Javran.Wow.Types
@@ -18,6 +19,7 @@ module Javran.Wow.Types
   , WEnv(..)
   , RepeatDigest(..)
   , WowM
+  , UpdFulfiller(..)
   ) where
 
 import Data.Int
@@ -199,3 +201,20 @@ instance FromJSON RepeatDigest where
 instance FromJSONKey RepeatDigest
 
 type WowM a = RWST WEnv () WState ClientM a
+
+-- TOOD: UpdFulfiller chains update handlers together
+-- by feeding update to them one by one util
+-- once a handler return True, at that point all the rest of the
+-- handlers are not attempted
+newtype UpdFulfiller a = UpdFulfiller
+  { getUpdFulfiller :: Update -> WowM a }
+
+instance Semigroup (UpdFulfiller Bool) where
+  UpdFulfiller f <> UpdFulfiller g =
+      UpdFulfiller $ \upd ->
+          f upd >>= \case
+            True -> pure True
+            False -> g upd
+
+instance Monoid (UpdFulfiller Bool) where
+  mempty = UpdFulfiller (const (pure False))
