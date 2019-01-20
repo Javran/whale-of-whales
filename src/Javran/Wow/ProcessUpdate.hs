@@ -121,19 +121,18 @@ processUpdate upd@Update{..} = do
     when shouldProcess $ do
       let combinedUpdateProcessor =
             getUpdFulfiller (foldMap (\(BMod m) -> bmUpdFulfiller m) botMods)
-
-      -- first intercept by new bot modules
+      -- process updates using modules
       processed <- combinedUpdateProcessor upd
-      case upd of
-        Update
-          { message = Just Message { sticker = Just Sticker {sticker_file_id}}
-          } | not processed -> do
-              liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
-              liftIO $ putStrLn $ "[sticker] " ++ show upd
-        Update
-          { message = Just Message{}} | not processed ->
-          liftIO $ putStrLn $ "[msg] " ++ show upd
-        _ | not processed -> do
-          let dbg = False
-          when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
-        _ -> pure ()
+      unless processed $
+        case upd of
+          Update
+            { message = Just Message { sticker = Just Sticker {sticker_file_id}}
+            } -> do
+                  liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
+                  liftIO $ putStrLn $ "[sticker] " ++ show upd
+          Update
+            { message = Just Message{}} ->
+            liftIO $ putStrLn $ "[msg] " ++ show upd
+          _ -> do
+            let dbg = False
+            when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
