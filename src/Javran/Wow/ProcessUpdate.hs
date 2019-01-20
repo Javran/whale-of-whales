@@ -5,6 +5,7 @@
   , MultiWayIf
   , ScopedTypeVariables
   , TypeApplications
+  , LambdaCase
   #-}
 module Javran.Wow.ProcessUpdate
   ( processUpdate
@@ -22,6 +23,7 @@ import Data.Time
 import Data.Char
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.Maybe
@@ -292,22 +294,35 @@ processYorN isYes upd
       pure ()
   | otherwise = pure ()
 
+shouldProcessUpdate :: S.Set Int64 -> Update -> Bool
+shouldProcessUpdate wg = \case
+  Update
+    { message = Just Message {chat = Chat {chat_id}}
+    } ->
+    chat_id `elem` wg
+  Update
+    { callback_query =
+        Just CallbackQuery 
+          { cq_message = Just Message {chat = Chat {chat_id}} }
+    } ->
+    chat_id `elem` wg
+  _ -> False
+
 processUpdate :: Update -> WowM ()
 processUpdate upd@Update{..} = do
-    -- we should only handle messages coming from pre-defined chats.
-    shouldProcess <-
-      asks (\WEnv{watchingGroups} curChatId ->
-               curChatId `elem` watchingGroups)
-    bumpLastSeen upd
-    case upd of
-      Update
-        { message =
-            Just msg@Message
-              { chat = Chat {chat_id}
-              }
-        }
-        | shouldProcess chat_id
-        , Just cmd <- extractBotCommand msg -> do
+    bumpLastSeen upd  
+    shouldProcess <- asks $
+      \WEnv{watchingGroups=wg} ->
+        shouldProcessUpdate wg upd
+    when shouldProcess $
+      case upd of
+        Update
+          { message =
+              Just msg@Message
+                { chat = Chat {chat_id}
+                }
+          }
+          | Just cmd <- extractBotCommand msg -> do
             let sendWhale = do
                   WEnv {whaleStickers} <- ask
                   whaleSticker <- pickM whaleStickers
@@ -322,14 +337,14 @@ processUpdate upd@Update{..} = do
               "/y" -> processYorN True  upd
               "/n" -> processYorN False upd
               _ -> liftIO $ putStrLn $ "unrecognized command: " ++ T.unpack cmd
-      Update
-        { callback_query =
-            Just CallbackQuery
-              { cq_from = User {user_id, user_username}
-              , cq_message = Just Message {message_id, chat = Chat {chat_id}}
-              , cq_id
-              }
-        } | shouldProcess chat_id -> do
+        Update
+          { callback_query =
+              Just CallbackQuery
+                { cq_from = User {user_id, user_username}
+                , cq_message = Just Message {message_id, chat = Chat {chat_id}}
+                , cq_id
+                }
+          } -> do
            let curChatId = T.pack (show chat_id)
            groupState <- getGroupState curChatId
            let GroupState {pendingKicks = pks} = groupState
@@ -355,40 +370,37 @@ processUpdate upd@Update{..} = do
                                }
                  _ <- tryWithTag "VerifSayHi" $ liftTC $ sendMessageM req
                  pure ()
-      Update
-        { message =
-            Just Message
-                 { chat = Chat {chat_type = ct, chat_id = ci}
-                 , new_chat_members = Just users
-                 , message_id
-                 }
-        }
-        | shouldProcess ci
-        , ct == Group || ct == Supergroup ->
+        Update
+          { message =
+              Just Message
+                { chat = Chat {chat_type = ct, chat_id = ci}
+                , new_chat_members = Just users
+                , message_id
+                }
+          }
+          | ct == Group || ct == Supergroup ->
             processNewMembers message_id ci users
-      Update
-        { message =
-            Just Message
-                 { sticker = Just Sticker {sticker_file_id}
-                 , chat = Chat {chat_id}
-                 }
-        }
-        | shouldProcess chat_id -> do
-          liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
-          liftIO $ putStrLn $ "[sticker] " ++ show upd
-          processRepeater (int64ToT chat_id) upd
-      Update
-        { message =
+        Update
+          { message =
+              Just Message
+                { sticker = Just Sticker {sticker_file_id}
+                , chat = Chat {chat_id}
+                }
+          } -> do
+              liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
+              liftIO $ putStrLn $ "[sticker] " ++ show upd
+              processRepeater (int64ToT chat_id) upd
+        Update
+          { message =
             Just Message
                  { chat = Chat {chat_id = ci}
                  }
-        }
-        | shouldProcess ci -> do
+          } -> do
           liftIO $ putStrLn $ "[msg] " ++ show upd
           processRepeater (int64ToT ci) upd
-      _ -> do
-        let dbg = False
-        when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
+        _ -> do
+          let dbg = False
+          when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
   where
     processNewMembers msgId chatId usersInp = do
         let curGroupId = T.pack (show chatId)
