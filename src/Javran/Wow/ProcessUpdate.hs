@@ -11,6 +11,7 @@ module Javran.Wow.ProcessUpdate
   , processKicks
   , loadState
   , saveState
+  , startBot
   ) where
 
 import Control.Monad.IO.Class
@@ -25,12 +26,15 @@ import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.Maybe
 import Data.Int
+import Control.Exception
 
 import Javran.Wow.Types
 import Javran.Wow.Base
 import Javran.Wow.Default ()
 import Data.Default.Class
 import Data.Time.Clock.POSIX
+import Network.HTTP.Client (newManager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 import Text.ParserCombinators.ReadP hiding (get)
 
@@ -56,6 +60,45 @@ isWhaleCommand inp = case readP_to_S pWhale (T.unpack inp) of
       string "hale" *>
       optional (char 's') *>
       eof
+
+startBot :: WEnv -> Int -> IO ()
+startBot wenv@WEnv{..} = fix $ \r errCount ->
+    if errCount < 10
+      then catch (forever run) errHandler >> r (succ errCount)
+      else putStrLn "Too many errors, aborting."
+  where
+    run :: IO ()
+    run = do
+      putStrLn "bot started"
+      mgr <- newManager tlsManagerSettings
+      initState <- loadState stateFile
+      void $ runWowM wenv initState mgr $ do
+        -- we need to do this only once at startup
+        _ <- tryWithTag "DelWebhook" $ liftTC deleteWebhookM
+        -- forever for update handling        
+        forever $ do
+          (oldSt@WPState {..}, _) <- get
+          {-
+            INVARIANT:
+              - handleUpdate should be able to capture all ServantError inside of it.
+              - same invariant for handleKicks
+           -}
+          mapM_ processUpdate =<< liftTC (do
+            let req = def
+                      { updates_offset = succ <$> lastUpdate
+                      , updates_timeout = Just pullTimeout
+                      }
+            Response {..} <- getUpdatesM req
+            pure result)
+          processKicks
+          (newSt, _) <- get
+          when (oldSt /= newSt) saveState
+
+    errHandler :: SomeException -> IO ()
+    errHandler e =
+      appendLogTo logFile $
+        "Exception caught: " ++ displayException e
+
 
 bumpLastSeen :: Update -> WowM ()
 bumpLastSeen Update{..} = do
