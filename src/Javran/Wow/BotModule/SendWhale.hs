@@ -46,11 +46,15 @@ sendWhale :: Int64 -> WowM ()
 sendWhale chatId = do
     WEnv {whaleStickers} <- ask
     whaleSticker <- pickM whaleStickers
-    void $ tryWithTag "Whale" $ liftTC $
+    msg <- tryWithTag "Whale" $ liftTC $
          sendStickerM ((def @(SendStickerRequest T.Text))
                         { sticker_chat_id = ChatId chatId
                         , sticker_sticker = whaleSticker :: T.Text
                         })
+    case msg of
+      Just Response {result = Message {from = Just User{user_id}}} ->
+        liftIO $ putStrLn $ "[dbg] my user id is: " ++ show user_id
+      _ -> pure ()
 
 instance BotModule SendWhale where
     bmUpdFulfiller _ = UpdFulfiller $ \case
