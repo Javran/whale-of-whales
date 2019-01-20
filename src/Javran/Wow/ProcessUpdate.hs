@@ -20,6 +20,7 @@ import Control.Monad.RWS
 import Web.Telegram.API.Bot
 import Data.Time
 import Data.Char
+
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -30,6 +31,7 @@ import Control.Exception
 
 import Javran.Wow.Types
 import Javran.Wow.Base
+import Javran.Wow.Util
 import Javran.Wow.Default ()
 import Data.Default.Class
 import Data.Time.Clock.POSIX
@@ -39,12 +41,18 @@ import Data.Proxy
 
 import Text.ParserCombinators.ReadP hiding (get)
 import Javran.Wow.BotModule.UserVerification (UserVerification)
+import Javran.Wow.BotModule.CommandSink (CommandSink)
 
 data BMod = forall bm. BotModule bm => BMod (Proxy bm)
 
+-- list of modules
+-- note that both updates and post-processings are handled in the same order
 botMods :: [BMod]
 botMods =
     [ BMod (Proxy :: Proxy UserVerification)
+      -- NOTE: CommandSink consumes all commands,
+      -- no bot command modules should be placed after it.
+    , BMod (Proxy :: Proxy CommandSink)
     ]
 
 int64ToT :: Int64 -> T.Text
@@ -86,7 +94,7 @@ startBot wenv@WEnv{..} = fix $ \r errCount ->
       void $ runWowM wenv initState mgr $ do
         -- we need to do this only once at startup
         _ <- tryWithTag "DelWebhook" $ liftTC deleteWebhookM
-        -- forever for update handling        
+        -- forever for update handling
         forever $ do
           (oldSt@WPState {..}, _) <- get
           {-
@@ -116,14 +124,6 @@ bumpLastSeen Update{..} = do
     let updF oldId = Just $ if oldId < update_id then update_id else oldId
     modify (\(s@WPState{lastUpdate},rg) ->
               (s {lastUpdate = maybe (Just update_id) updF lastUpdate}, rg))
-
-extractBotCommand :: Message -> Maybe T.Text
-extractBotCommand msg
-  | Message { entities = Just es, text = Just content } <- msg
-  , MessageEntity {me_offset, me_length}:_ <-
-      filter (\m -> me_type m == "bot_command") es
-  = Just (T.toLower . T.take me_length . T.drop me_offset $ content)
-  | otherwise = Nothing
 
 getGroupState :: T.Text -> WowM GroupState
 getGroupState chatId =
@@ -270,7 +270,7 @@ noMessages :: [[T.Text]]
 noMessages =
     [ ["说", "书", "舒"]
     , ["的", "得", "地"]
-    , ["不", "卜", "部"]    
+    , ["不", "卜", "部"]
     , ["对", "队", "兑"]
     ]
 
@@ -308,7 +308,7 @@ shouldProcessUpdate wg = \case
     chat_id `elem` wg
   Update
     { callback_query =
-        Just CallbackQuery 
+        Just CallbackQuery
           { cq_message = Just Message {chat = Chat {chat_id}} }
     } ->
     chat_id `elem` wg
@@ -316,13 +316,16 @@ shouldProcessUpdate wg = \case
 
 processUpdate :: Update -> WowM ()
 processUpdate upd@Update{..} = do
-    bumpLastSeen upd  
+    bumpLastSeen upd
     shouldProcess <- asks $
       \WEnv{watchingGroups=wg} ->
         shouldProcessUpdate wg upd
     when shouldProcess $ do
+      let combinedUpdateProcessor =
+            getUpdFulfiller (foldMap (\(BMod m) -> bmUpdFulfiller m) botMods)
+
       -- first intercept by new bot modules
-      processed <- getUpdFulfiller (foldMap (\(BMod m) -> bmUpdFulfiller m) botMods) upd
+      processed <- combinedUpdateProcessor upd
       case upd of
         Update
           { message =
@@ -344,7 +347,7 @@ processUpdate upd@Update{..} = do
               _ | isWhaleCommand cmd -> sendWhale
               "/y" -> processYorN True  upd
               "/n" -> processYorN False upd
-              _ -> liftIO $ putStrLn $ "unrecognized command: " ++ T.unpack cmd
+              _ -> pure () -- should have been processed
         Update
           { message =
               Just Message

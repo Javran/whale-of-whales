@@ -26,8 +26,10 @@ executable wow
                 Javran.Wow.Types
               , Javran.Wow.Base
               , Javran.Wow.Default
+              , Javran.Wow.Util
               , Javran.Wow.ProcessUpdate
               , Javran.Wow.BotModule.UserVerification
+              , Javran.Wow.BotModule.CommandSink
   build-depends:
                 base
               , telegram-api
