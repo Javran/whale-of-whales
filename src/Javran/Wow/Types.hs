@@ -20,6 +20,7 @@ module Javran.Wow.Types
   , RepeatDigest(..)
   , WowM
   , UpdFulfiller(..)
+  , BotModule(..)
   ) where
 
 import Data.Int
@@ -218,3 +219,12 @@ instance Semigroup (UpdFulfiller Bool) where
 
 instance Monoid (UpdFulfiller Bool) where
   mempty = UpdFulfiller (const (pure False))
+
+class BotModule cmd where
+  bmUpdFulfiller :: forall p. p cmd -> UpdFulfiller Bool
+  bmUpdFulfiller _ = mempty
+  -- an optional phase happens when all updates are processed
+  -- note that it's possible that there might not be any update at all.
+  -- useful for modules that manage user verification
+  bmPostProcess :: forall p. p cmd -> WowM ()
+  bmPostProcess _ = pure ()
