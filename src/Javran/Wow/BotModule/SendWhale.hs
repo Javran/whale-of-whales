@@ -4,7 +4,7 @@
   , TypeApplications
   #-}
 module Javran.Wow.BotModule.SendWhale
-  ( SendWhale
+   ( SendWhale
   ) where
 
 import Data.Int (Int64)

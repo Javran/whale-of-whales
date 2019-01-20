@@ -28,18 +28,18 @@ import Data.Maybe
 import Data.Int
 import Control.Exception
 
-import Javran.Wow.Types
-import Javran.Wow.Base
-import Javran.Wow.Util
-import Javran.Wow.Default ()
 import Data.Default.Class
+import Data.Proxy
 import Data.Time.Clock.POSIX
 import Network.HTTP.Client (newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Data.Proxy
 
+import Javran.Wow.Base
+import Javran.Wow.Default ()
+import Javran.Wow.Types
 import Javran.Wow.BotModule.UserVerification (UserVerification)
 import Javran.Wow.BotModule.SendWhale (SendWhale)
+import Javran.Wow.BotModule.SendYesOrNo (SendYesOrNo)
 import Javran.Wow.BotModule.CommandSink (CommandSink)
 
 data BMod = forall bm. BotModule bm => BMod (Proxy bm)
@@ -50,6 +50,7 @@ botMods :: [BMod]
 botMods =
     [ BMod (Proxy :: Proxy UserVerification)
     , BMod (Proxy :: Proxy SendWhale)
+    , BMod (Proxy :: Proxy SendYesOrNo)
       -- NOTE: CommandSink consumes all commands,
       -- no bot command modules should be placed after it.
     -- , BMod (Proxy :: Proxy CommandSink)
@@ -230,60 +231,6 @@ processRepeater groupId upd
 
   | otherwise = pure ()
 
-userDesc :: User -> T.Text
-userDesc User{..} =
-    if T.length lastName > 0
-      then firstName <> " " <> lastName
-      else firstName
-  where
-    firstName = user_first_name
-    lastName = fromMaybe T.empty user_last_name
-
-yesMessages :: [[T.Text]]
-yesMessages =
-    [ ["说", "书", "舒"]
-    , ["的", "得", "地"]
-    , ["对", "队", "兑"]
-    ]
-
-noMessages :: [[T.Text]]
-noMessages =
-    [ ["说", "书", "舒"]
-    , ["的", "得", "地"]
-    , ["不", "卜", "部"]
-    , ["对", "队", "兑"]
-    ]
-
-processYorN :: Bool -> Update -> WowM ()
-processYorN isYes upd
-  | Update
-      { message = Just msg@Message {chat = Chat {chat_id}}
-      } <- upd
-  , Message
-      { text = Just content
-      , from = Just user
-      , reply_to_message
-      } <- msg
-    -- should trigger when it's replying to some message
-  , isJust reply_to_message || T.length content > 2
-  = do
-      WEnv {selfUserId} <- ask
-      -- prioritize on replies, we only try a regular "yes or no" after
-      -- pattern matching has failed
-      let who = case reply_to_message of
-            Just Message {from = Just u@User {user_id}} ->
-              if user_id == selfUserId
-                then "我"
-                else userDesc u
-            _ -> userDesc user
-      rndMsg <- T.concat <$> mapM pickM (if isYes then yesMessages else noMessages)
-      let req = def { message_chat_id = ChatId chat_id
-                    , message_text = who <> rndMsg <> "!"
-                    }
-      _ <- tryWithTag "YorN" $ liftTC $ sendMessageM req
-      pure ()
-  | otherwise = pure ()
-
 shouldProcessUpdate :: S.Set Int64 -> Update -> Bool
 shouldProcessUpdate wg = \case
   Update
@@ -311,15 +258,6 @@ processUpdate upd@Update{..} = do
       -- first intercept by new bot modules
       processed <- combinedUpdateProcessor upd
       case upd of
-        Update
-          { message =
-              Just msg
-          }
-          | Just cmd <- extractBotCommand msg, not processed ->
-            case cmd of
-              "/y" -> processYorN True  upd
-              "/n" -> processYorN False upd
-              _ -> pure () -- should have been processed
         Update
           { message =
               Just Message
