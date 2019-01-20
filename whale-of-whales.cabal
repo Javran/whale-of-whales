@@ -32,6 +32,7 @@ executable wow
               , Javran.Wow.BotModule.SendWhale
               , Javran.Wow.BotModule.SendYesOrNo
               , Javran.Wow.BotModule.CommandSink
+              , Javran.Wow.BotModule.Repeater
   build-depends:
                 base
               , telegram-api

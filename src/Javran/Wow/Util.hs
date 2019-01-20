@@ -5,6 +5,7 @@
 module Javran.Wow.Util
   ( extractBotCommand
   , userDesc
+  , showText
   ) where
 
 import qualified Data.Text as T
@@ -55,3 +56,6 @@ userDesc
     attempt = if T.length lastName > 0
       then firstName <> " " <> lastName
       else firstName
+
+showText :: Show a => a -> T.Text
+showText = T.pack . show
