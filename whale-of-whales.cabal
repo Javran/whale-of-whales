@@ -27,6 +27,7 @@ executable wow
               , Javran.Wow.Base
               , Javran.Wow.Default
               , Javran.Wow.ProcessUpdate
+              , Javran.Wow.BotModule.UserVerification
   build-depends:
                 base
               , telegram-api
