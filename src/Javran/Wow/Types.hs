@@ -125,6 +125,7 @@ data WEnv = WEnv
   , whaleStickers :: [T.Text]
   , repeatCooldown :: Int
   , repeatWindow :: Int
+  , selfUserId :: Int
   } deriving (Generic)
 
 instance ToJSON WEnv where
@@ -138,6 +139,7 @@ instance ToJSON WEnv where
                , "whale-stickers" .= whaleStickers
                , "repeat-cooldown" .= repeatCooldown
                , "repeat-window" .= repeatWindow
+               , "self-user-id" .= selfUserId
                ]
       where
         Token botTokStr = botToken
@@ -154,6 +156,7 @@ instance FromJSON WEnv where
             <*> o .: "whale-stickers"
             <*> o .: "repeat-cooldown"
             <*> o .: "repeat-window"
+            <*> o .: "self-user-id"
     parseJSON invalid = typeMismatch "WEnv" invalid
 
 {-

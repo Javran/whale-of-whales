@@ -52,7 +52,7 @@ botMods =
     , BMod (Proxy :: Proxy SendWhale)
       -- NOTE: CommandSink consumes all commands,
       -- no bot command modules should be placed after it.
-    , BMod (Proxy :: Proxy CommandSink)
+    -- , BMod (Proxy :: Proxy CommandSink)
     ]
 
 int64ToT :: Int64 -> T.Text
@@ -267,10 +267,14 @@ processYorN isYes upd
     -- should trigger when it's replying to some message
   , isJust reply_to_message || T.length content > 2
   = do
+      WEnv {selfUserId} <- ask
       -- prioritize on replies, we only try a regular "yes or no" after
       -- pattern matching has failed
       let who = case reply_to_message of
-            Just Message {from = Just u} -> userDesc u
+            Just Message {from = Just u@User {user_id}} ->
+              if user_id == selfUserId
+                then "我"
+                else userDesc u
             _ -> userDesc user
       rndMsg <- T.concat <$> mapM pickM (if isYes then yesMessages else noMessages)
       let req = def { message_chat_id = ChatId chat_id
