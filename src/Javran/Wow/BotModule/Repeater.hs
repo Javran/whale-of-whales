@@ -59,13 +59,16 @@ processRepeater :: T.Text -> Update -> WowM ()
 processRepeater groupId upd
   | Just digest@(curTime, (_, rd)) <- updateToRepeatDigest upd
   = do
-    window <- asks repeatWindow
-    cd <- asks repeatCooldown
+    WEnv
+      { repeatWindow
+      , repeatCooldown
+      , repeatUniqUserCount
+      } <- ask
     let timeCut =
           -- conversion will consider UTCTime to be seconds.
-          takeWhile (\(t, _) -> floor (curTime `diffUTCTime` t) <= window)
+          takeWhile (\(t, _) -> floor (curTime `diffUTCTime` t) <= repeatWindow)
         updateRcd =
-          M.filter (\t -> floor (curTime `diffUTCTime` t) <= cd)
+          M.filter (\t -> floor (curTime `diffUTCTime` t) <= repeatCooldown)
     -- + remove outdated message digests (by cutting at time window)
     -- + remove expired cooldown
     modifyGroupState groupId $
@@ -78,7 +81,7 @@ processRepeater groupId upd
       , repeaterCooldown = newCds
       } <- getGroupState groupId
 
-    let distinctUserCount =
+    let uniqUserCount =
               IS.size
             . foldMap (\(_, (u, rd')) ->
                           if rd == rd'
@@ -87,7 +90,7 @@ processRepeater groupId upd
             $ newRds
     when (rd `M.member` newCds) $
       liftIO $ putStrLn "no repeat due to cooldown"
-    when ((rd `M.notMember` newCds) && distinctUserCount >= 3) $ do
+    when ((rd `M.notMember` newCds) && uniqUserCount >= repeatUniqUserCount) $ do
       -- now we should repeat
       let Update
             { message = Just msg@Message{forward_from, message_id}
