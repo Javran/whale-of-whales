@@ -230,10 +230,16 @@ processYorN isYes upd
   , Message
       { text = Just content
       , from = Just user
+      , reply_to_message
       } <- msg
-  , T.length content > 2
+    -- should trigger when it's replying to some message
+  , isJust reply_to_message || T.length content > 2
   = do
-      let who = userDesc user
+      -- prioritize on replies, we only try a regular "yes or no" after
+      -- pattern matching has failed
+      let who = case reply_to_message of
+            Just Message {from = Just u} -> userDesc u
+            _ -> userDesc user
       rndMsg <- T.concat <$> mapM pickM (if isYes then yesMessages else noMessages)
       let req = def { message_chat_id = ChatId chat_id
                     , message_text = who <> rndMsg <> "!"
