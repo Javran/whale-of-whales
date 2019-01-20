@@ -81,13 +81,14 @@ processNewMembers msgId chatId usersInp = do
 
 instance BotModule UserVerification where
   bmUpdFulfiller _ = UpdFulfiller $ \case
-    Update
-      { message = Just Message
+      Update
+        { message = Just Message
           { chat = Chat {chat_type = ct, chat_id = ci}
           , new_chat_members = Just users
           , message_id
           }
-      }
-      | ct == Group || ct == Supergroup -> do
-        processNewMembers message_id ci users
-        pure True
+        }
+        | ct == Group || ct == Supergroup -> do
+            processNewMembers message_id ci users
+            pure True
+      _ -> pure False

@@ -42,7 +42,7 @@ import Data.Aeson.Types
 deriving instance Eq ChatType
 
 instance Default (IM.IntMap a) where
-  def = mempty
+    def = mempty
 
 data UserVerificationMessage = UserVerificationMessage
   { timestamp :: UTCTime
@@ -50,17 +50,17 @@ data UserVerificationMessage = UserVerificationMessage
   } deriving (Read, Show, Eq)
 
 instance ToJSON UserVerificationMessage where
-  toJSON UserVerificationMessage {..} =
-    object [ "timestamp" .= timestamp
-           , "user-set" .= userSet
-           ] 
+    toJSON UserVerificationMessage {..} =
+        object [ "timestamp" .= timestamp
+               , "user-set" .= userSet
+               ]
 
 instance FromJSON UserVerificationMessage where
-  parseJSON (Object o) =
-    UserVerificationMessage
-      <$> o .: "timestamp"
-      <*> o .: "user-set"
-  parseJSON invalid = typeMismatch "UserVerificationMessage" invalid
+    parseJSON (Object o) =
+        UserVerificationMessage
+            <$> o .: "timestamp"
+            <*> o .: "user-set"
+    parseJSON invalid = typeMismatch "UserVerificationMessage" invalid
 
 data GroupState = GroupState
   { pendingKicks :: IM.IntMap UserVerificationMessage
@@ -71,23 +71,23 @@ data GroupState = GroupState
   , repeaterCooldown :: M.Map RepeatDigest UTCTime
   } deriving (Read, Show, Eq, Generic)
 
-instance Default GroupState 
+instance Default GroupState
 
 instance FromJSON GroupState where
-  parseJSON (Object o) =
-    GroupState
-      <$> o .: "pending-kicks"
-      <*> o .: "repeater-digest"
-      <*> o .: "repeater-cooldown"
-  parseJSON invalid = typeMismatch "GroupState" invalid      
+    parseJSON (Object o) =
+        GroupState
+            <$> o .: "pending-kicks"
+            <*> o .: "repeater-digest"
+            <*> o .: "repeater-cooldown"
+    parseJSON invalid = typeMismatch "GroupState" invalid
 
 instance ToJSON GroupState where
-  toJSON GroupState {..} =
-    object [ "pending-kicks" .= pendingKicks
-           , "repeater-digest" .= repeaterDigest
-           , "repeater-cooldown" .= repeaterCooldown
-           ]
-    
+    toJSON GroupState {..} =
+        object [ "pending-kicks" .= pendingKicks
+               , "repeater-digest" .= repeaterDigest
+               , "repeater-cooldown" .= repeaterCooldown
+               ]
+
 -- "P" for persistent
 data WPState = WPState
   { lastUpdate :: Maybe Int
@@ -95,20 +95,20 @@ data WPState = WPState
   } deriving (Read, Show, Eq, Generic)
 
 instance ToJSON WPState where
-  toJSON WPState{..} =
-    object [ "last-update" .= lastUpdate
-           , "group-states" .= groupStates
-           ]
+    toJSON WPState{..} =
+        object [ "last-update" .= lastUpdate
+               , "group-states" .= groupStates
+               ]
 
 instance FromJSON WPState where
-  parseJSON (Object o) =
-    WPState
-      <$> o .:? "last-update"
-      <*> o .: "group-states"
-  parseJSON invalid = typeMismatch "WPState" invalid
+    parseJSON (Object o) =
+        WPState
+            <$> o .:? "last-update"
+            <*> o .: "group-states"
+    parseJSON invalid = typeMismatch "WPState" invalid
 
 instance Default (M.Map a b) where
-  def = M.empty
+    def = M.empty
 
 instance Default WPState
 
@@ -128,33 +128,33 @@ data WEnv = WEnv
   } deriving (Generic)
 
 instance ToJSON WEnv where
-  toJSON WEnv{..} =
-      object [ "bot-token" .= botTokStr
-             , "pull-timeout" .= pullTimeout
-             , "kick-timeout" .= kickTimeout
-             , "log-file" .= logFile
-             , "state-file" .= stateFile
-             , "watching-groups" .= watchingGroups
-             , "whale-stickers" .= whaleStickers
-             , "repeat-cooldown" .= repeatCooldown
-             , "repeat-window" .= repeatWindow
-             ]
-    where
-      Token botTokStr = botToken
+    toJSON WEnv{..} =
+        object [ "bot-token" .= botTokStr
+               , "pull-timeout" .= pullTimeout
+               , "kick-timeout" .= kickTimeout
+               , "log-file" .= logFile
+               , "state-file" .= stateFile
+               , "watching-groups" .= watchingGroups
+               , "whale-stickers" .= whaleStickers
+               , "repeat-cooldown" .= repeatCooldown
+               , "repeat-window" .= repeatWindow
+               ]
+      where
+        Token botTokStr = botToken
 
 instance FromJSON WEnv where
-  parseJSON (Object o) =
-      WEnv
-        <$> (Token <$> (o .: "bot-token"))
-        <*> o .: "pull-timeout"
-        <*> o .: "kick-timeout"
-        <*> o .: "log-file"
-        <*> o .: "state-file"
-        <*> o .: "watching-groups"
-        <*> o .: "whale-stickers"
-        <*> o .: "repeat-cooldown"
-        <*> o .: "repeat-window"
-  parseJSON invalid = typeMismatch "WEnv" invalid
+    parseJSON (Object o) =
+        WEnv
+            <$> (Token <$> (o .: "bot-token"))
+            <*> o .: "pull-timeout"
+            <*> o .: "kick-timeout"
+            <*> o .: "log-file"
+            <*> o .: "state-file"
+            <*> o .: "watching-groups"
+            <*> o .: "whale-stickers"
+            <*> o .: "repeat-cooldown"
+            <*> o .: "repeat-window"
+    parseJSON invalid = typeMismatch "WEnv" invalid
 
 {-
   mechanism for repeater cooldown
@@ -187,17 +187,17 @@ data RepeatDigest
     deriving (Read, Show, Eq, Ord)
 
 instance ToJSON RepeatDigest where
-  toJSON = \case
-    RepeatMessageDigest x -> String ("msg:" <> x)
-    RepeatStickerDigest x -> String ("stk:" <> x)
+    toJSON = \case
+        RepeatMessageDigest x -> String ("msg:" <> x)
+        RepeatStickerDigest x -> String ("stk:" <> x)
 
 instance ToJSONKey RepeatDigest
 
 instance FromJSON RepeatDigest where
   parseJSON = withText "RepeatDigest" $ \x ->
-    if | "msg:" `T.isPrefixOf` x -> pure (RepeatMessageDigest $ T.drop 4 x)
-       | "stk:" `T.isPrefixOf` x -> pure (RepeatStickerDigest $ T.drop 4 x)
-       | otherwise -> fail "unrecognized text"
+      if | "msg:" `T.isPrefixOf` x -> pure (RepeatMessageDigest $ T.drop 4 x)
+         | "stk:" `T.isPrefixOf` x -> pure (RepeatStickerDigest $ T.drop 4 x)
+         | otherwise -> fail "unrecognized text"
 
 instance FromJSONKey RepeatDigest
 
@@ -211,20 +211,20 @@ newtype UpdFulfiller a = UpdFulfiller
   { getUpdFulfiller :: Update -> WowM a }
 
 instance Semigroup (UpdFulfiller Bool) where
-  UpdFulfiller f <> UpdFulfiller g =
-      UpdFulfiller $ \upd ->
-          f upd >>= \case
-            True -> pure True
-            False -> g upd
+    UpdFulfiller f <> UpdFulfiller g =
+        UpdFulfiller $ \upd ->
+            f upd >>= \case
+                True -> pure True
+                False -> g upd
 
 instance Monoid (UpdFulfiller Bool) where
-  mempty = UpdFulfiller (const (pure False))
+    mempty = UpdFulfiller (const (pure False))
 
 class BotModule cmd where
-  bmUpdFulfiller :: forall p. p cmd -> UpdFulfiller Bool
-  bmUpdFulfiller _ = mempty
-  -- an optional phase happens when all updates are processed
-  -- note that it's possible that there might not be any update at all.
-  -- useful for modules that manage user verification
-  bmPostProcess :: forall p. p cmd -> WowM ()
-  bmPostProcess _ = pure ()
+    bmUpdFulfiller :: forall p. p cmd -> UpdFulfiller Bool
+    bmUpdFulfiller _ = mempty
+    -- an optional phase happens when all updates are processed
+    -- note that it's possible that there might not be any update at all.
+    -- useful for modules that manage user verification
+    bmPostProcess :: forall p. p cmd -> WowM ()
+    bmPostProcess _ = pure ()
