@@ -141,6 +141,7 @@ instance ToJSON WEnv where
                , "repeat-cooldown" .= repeatCooldown
                , "repeat-window" .= repeatWindow
                , "repeat-uniq-user-count" .= repeatUniqUserCount
+               -- TODO: we should be able to get this by "getMe" method
                , "self-user-id" .= selfUserId
                ]
       where
