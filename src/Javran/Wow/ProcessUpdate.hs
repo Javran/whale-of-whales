@@ -19,6 +19,7 @@ import Control.Monad.RWS
 import Web.Telegram.API.Bot
 
 import qualified Data.Set as S
+import qualified Data.Text as T
 import Data.Int
 import Control.Exception
 
@@ -65,6 +66,21 @@ startBot wenv@WEnv{..} = fix $ \r errCount ->
       mgr <- newManager tlsManagerSettings
       initState <- loadState stateFile
       void $ runWowM wenv initState mgr $ do
+        {-
+          print info about itself at startup.
+          by doing so we confirm the API is working
+          and inform developer about bot's user id if it is not yet known
+         -}
+        eMeInfo <- tryWithTag "GetMe" $ liftTC getMeM
+        case eMeInfo of
+          Nothing -> pure ()
+          Just Response{result=User{..}} ->
+            liftIO $ do
+              let trM = maybe "<Nothing>" T.unpack
+              putStrLn $ "User Id: " <> show user_id
+              putStrLn $ "First Name: " <> T.unpack user_first_name
+              putStrLn $ "Last Name: " <> trM user_last_name
+              putStrLn $ "Username: " <> trM user_username
         -- we need to do this only once at startup
         _ <- tryWithTag "DelWebhook" $ liftTC deleteWebhookM
         -- forever for update handling
