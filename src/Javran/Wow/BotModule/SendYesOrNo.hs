@@ -1,7 +1,6 @@
 {-# LANGUAGE
     OverloadedStrings
   , NamedFieldPuns
-  , RecordWildCards
   #-}
 module Javran.Wow.BotModule.SendYesOrNo where
 
@@ -44,8 +43,9 @@ replyWith isYes upd
         , from = Just user
         , reply_to_message
         } <- msg
+    , Just cmd <- extractBotCommand msg
       -- should trigger when it's replying to some message
-    , isJust reply_to_message || T.length content > 2
+    , isJust reply_to_message || T.length content > T.length cmd
     = do
         WEnv {selfUserId} <- ask
         -- prioritize on replies, we only try a regular "yes or no" after
