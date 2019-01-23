@@ -2,6 +2,7 @@
     LambdaCase
   , NamedFieldPuns
   , TypeApplications
+  , OverloadedStrings
   #-}
 module Javran.Wow.BotModule.SendWhale
    ( SendWhale
@@ -58,7 +59,18 @@ sendWhale chatId = do
 
 instance BotModule SendWhale where
     bmUpdFulfiller _ = UpdFulfiller $ \case
-        Update { message = Just msg@Message { chat = Chat {chat_id}} }
-            | Just cmd <- extractBotCommand msg, isWhaleCommand cmd ->
-                sendWhale chat_id >> pure True
+        Update { message = Just msg@Message { chat = Chat {chat_id}, text = Just content} }
+            | Just cmd <- extractBotCommand msg, isWhaleCommand cmd -> do
+                if "/" `T.isPrefixOf` content
+                  then do
+                    roll <- genNextRM (0,4)
+                    if roll == (0 :: Int)
+                      then
+                        let req = def { message_chat_id = ChatId chat_id
+                                      , message_text = "我跟你发个吃吧"
+                                      }
+                        in void $ tryWithTag "Whale'" $ liftTC $ sendMessageM req
+                      else sendWhale chat_id
+                  else sendWhale chat_id
+                pure True
         _ -> pure False
