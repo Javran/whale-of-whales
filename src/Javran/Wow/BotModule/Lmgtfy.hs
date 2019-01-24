@@ -22,7 +22,7 @@ data Lmgtfy
 
 instance BotModule Lmgtfy where
     bmUpdFulfiller _ = UpdFulfiller $ \case
-        Update { message = Just msg@Message{chat = Chat {chat_id}} }
+        Update { message = Just msg@Message{chat = Chat {chat_id}, message_id} }
             | Just (cmd, (beforeTxt', afterTxt')) <- extractBotCommand' msg
             , cmd == "/g" || cmd == "/google"
             , (beforeTxt, afterTxt) <- (T.strip beforeTxt', T.strip afterTxt')
@@ -36,6 +36,7 @@ instance BotModule Lmgtfy where
                         | otherwise = bfEnc <> "+" <> afEnc
                     req = def { message_text = "http://lmgtfy.com/?q=" <> searchTxt
                               , message_chat_id = ChatId chat_id
+                              , message_reply_to_message_id = Just message_id
                               }
                 _ <- liftTC $ sendMessageM req
                 pure True
