@@ -4,6 +4,7 @@
   #-}
 module Javran.Wow.Util
   ( extractBotCommand
+  , extractBotCommand'
   , userDesc
   , showText
   ) where
@@ -29,6 +30,18 @@ extractBotCommand msg
     , MessageEntity {me_offset, me_length}:_ <-
         filter (\m -> me_type m == "bot_command") es
     = Just (T.toLower . T.take me_length . T.drop me_offset $ content)
+    | otherwise = Nothing
+
+extractBotCommand' :: Message -> Maybe (T.Text, (T.Text, T.Text))
+extractBotCommand' msg
+    | Message { entities = Just es, text = Just content } <- msg
+    , MessageEntity {me_offset, me_length}:_ <-
+        filter (\m -> me_type m == "bot_command") es
+    = Just ( T.toLower . T.take me_length . T.drop me_offset $ content,
+             ( T.take me_offset content
+             , T.drop (me_offset+me_length) content
+             )
+           )
     | otherwise = Nothing
 
 -- try to figure out how to describe this user in chat.
