@@ -25,13 +25,9 @@ import Data.Char
 
  -}
 extractBotCommand :: Message -> Maybe T.Text
-extractBotCommand msg
-    | Message { entities = Just es, text = Just content } <- msg
-    , MessageEntity {me_offset, me_length}:_ <-
-        filter (\m -> me_type m == "bot_command") es
-    = Just (T.toLower . T.take me_length . T.drop me_offset $ content)
-    | otherwise = Nothing
+extractBotCommand = (fst <$>) . extractBotCommand'
 
+-- extract a bot command with contents prefix-ing and postfix-ing it attached
 extractBotCommand' :: Message -> Maybe (T.Text, (T.Text, T.Text))
 extractBotCommand' msg
     | Message { entities = Just es, text = Just content } <- msg
