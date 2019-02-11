@@ -14,6 +14,14 @@ import Web.Telegram.API.Bot
 import Data.Maybe
 import Data.Char
 
+stripUserFromCommand :: T.Text -> Maybe T.Text
+stripUserFromCommand raw
+  | T.null post = Just raw
+  | post == "@whaleofwhalesbot" = Just pre -- TODO: shouldn't hard-code this
+  | otherwise = Nothing
+  where
+    (pre, post) = T.span (/= '@') raw
+
 {-
 
   extract and normalize bot command from a message
@@ -33,11 +41,14 @@ extractBotCommand' msg
     | Message { entities = Just es, text = Just content } <- msg
     , MessageEntity {me_offset, me_length}:_ <-
         filter (\m -> me_type m == "bot_command") es
-    = Just ( T.toLower . T.take me_length . T.drop me_offset $ content,
-             ( T.take me_offset content
-             , T.drop (me_offset+me_length) content
+    = do
+        let cmdRaw = T.toLower . T.take me_length . T.drop me_offset $ content
+        cmd <- stripUserFromCommand cmdRaw
+        Just ( cmd
+             , ( T.take me_offset content
+               , T.drop (me_offset+me_length) content
+               )
              )
-           )
     | otherwise = Nothing
 
 -- try to figure out how to describe this user in chat.
