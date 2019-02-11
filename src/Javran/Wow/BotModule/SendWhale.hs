@@ -5,14 +5,14 @@
   , OverloadedStrings
   #-}
 module Javran.Wow.BotModule.SendWhale
-   ( SendWhale
+  ( SendWhale
   ) where
 
+import Control.Monad.RWS
+import Data.Default.Class
 import Data.Int (Int64)
 import Text.ParserCombinators.ReadP hiding (get)
-import Control.Monad.RWS
 import Web.Telegram.API.Bot
-import Data.Default.Class
 
 import qualified Data.Text as T
 
