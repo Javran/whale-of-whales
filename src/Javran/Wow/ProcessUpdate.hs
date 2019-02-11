@@ -36,6 +36,7 @@ import Javran.Wow.BotModule.SendWhale (SendWhale)
 import Javran.Wow.BotModule.SendYesOrNo (SendYesOrNo)
 import Javran.Wow.BotModule.Lmgtfy (Lmgtfy)
 import Javran.Wow.BotModule.Chiba (Chiba)
+import Javran.Wow.BotModule.SimpleRandom (SimpleRandom)
 import Javran.Wow.BotModule.CommandSink (CommandSink)
 import Javran.Wow.BotModule.Repeater (Repeater)
 
@@ -50,6 +51,7 @@ botMods =
     , BMod (Proxy :: Proxy SendYesOrNo)
     , BMod (Proxy :: Proxy Lmgtfy)
     , BMod (Proxy :: Proxy Chiba)
+    , BMod (Proxy :: Proxy SimpleRandom)
       -- NOTE: CommandSink consumes all commands,
       -- no bot command modules should be placed after it.
     , BMod (Proxy :: Proxy CommandSink)
