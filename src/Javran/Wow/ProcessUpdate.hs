@@ -38,6 +38,7 @@ import Javran.Wow.BotModule.Lmgtfy (Lmgtfy)
 import Javran.Wow.BotModule.Chiba (Chiba)
 import Javran.Wow.BotModule.SimpleRandom (SimpleRandom)
 import Javran.Wow.BotModule.CommandSink (CommandSink)
+import Javran.Wow.BotModule.BianTaiXue (BianTaiXue)
 import Javran.Wow.BotModule.Repeater (Repeater)
 
 data BMod = forall bm. BotModule bm => BMod (Proxy bm)
@@ -55,6 +56,7 @@ botMods =
       -- NOTE: CommandSink consumes all commands,
       -- no bot command modules should be placed after it.
     , BMod (Proxy :: Proxy CommandSink)
+    , BMod (Proxy :: Proxy BianTaiXue)
     , BMod (Proxy :: Proxy Repeater)
     ]
 

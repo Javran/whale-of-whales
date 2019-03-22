@@ -35,6 +35,7 @@ executable wow
               , Javran.Wow.BotModule.Chiba
               , Javran.Wow.BotModule.SimpleRandom
               , Javran.Wow.BotModule.CommandSink
+              , Javran.Wow.BotModule.BianTaiXue
               , Javran.Wow.BotModule.Repeater
   build-depends:
                 base
