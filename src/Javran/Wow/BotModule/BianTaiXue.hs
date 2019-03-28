@@ -42,8 +42,8 @@ instance BotModule BianTaiXue where
     bmUpdFulfiller _ = UpdFulfiller $ \case
         Update { message = Just Message { chat = Chat {chat_id}, text = Just content} }
           | Just respContent <- getBtxMsg content -> do
-              roll <- genNextRM (0,4 :: Int)
-              if roll == 0
+              roll <- genNextRM (0,99 :: Int)
+              if roll < 80
                 then do
                   let req = def { message_chat_id = ChatId chat_id
                                 , message_text = respContent
