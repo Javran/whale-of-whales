@@ -14,6 +14,7 @@ import Data.Default.Class
 
 import qualified Data.Text as T
 import Data.Char
+import Data.Maybe
 
 import Javran.Wow.Types
 import Javran.Wow.Base
@@ -30,13 +31,17 @@ getBtxMsg raw = case readP_to_S btxMsgP (T.unpack raw) of
     btxMsgP = do
       skipSpaces
       _ <- char '我'
+      m <- option Nothing $ do
+        u <- satisfy (`elem` ("就救" :: String))
+        v <- satisfy (`elem` ("是世" :: String))
+        pure (Just [u,v])
       b <- satisfy (`elem` ("变變変" :: String))
       c <- satisfy (`elem` ("态態" :: String))
       d <- satisfy (`elem` ("学學" :: String))
       ys <- munch1 (not . isSpace)
       skipSpaces
       eof
-      pure ('他':[b,c,d] <> ys)
+      pure ('他': fromMaybe [] m <> [b,c,d] <> ys)
 
 instance BotModule BianTaiXue where
     bmUpdFulfiller _ = UpdFulfiller $ \case
