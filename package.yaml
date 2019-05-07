@@ -3,6 +3,9 @@ version: 0.1.0.0
 homepage: https://github.com/githubuser/whale-of-whales#readme
 maintainer: Javran Cheng <Javran.C@gmail.com>
 github: Javran/whale-of-whales
+extra-source-files:
+- README.md
+- ChangeLog.md
 
 ghc-options: -Wall -O2
 
