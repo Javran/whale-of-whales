@@ -27,17 +27,20 @@ getBtxMsg raw = case readP_to_S btxMsgP (T.unpack raw) of
     [(r, [])] -> Just (T.pack r)
     _ -> Nothing
   where
+    oneOfChar :: [] Char -> ReadP Char
+    oneOfChar xs = satisfy (`elem` xs)
+
     btxMsgP :: ReadP String
     btxMsgP = do
       skipSpaces
       _ <- char '我'
       m <- option Nothing $ do
-        u <- satisfy (`elem` ("就救" :: String))
-        v <- satisfy (`elem` ("是世" :: String))
-        pure (Just [u,v])
-      b <- satisfy (`elem` ("变變変" :: String))
-      c <- satisfy (`elem` ("态態" :: String))
-      d <- satisfy (`elem` ("学學" :: String))
+        u <- option [] $ (:[]) <$> oneOfChar "就救"
+        v <- oneOfChar "是世"
+        pure (Just $ u <> [v])
+      b <- oneOfChar "变變変"
+      c <- oneOfChar "态態"
+      d <- oneOfChar "学學"
       ys <- munch1 (not . isSpace)
       skipSpaces
       eof
