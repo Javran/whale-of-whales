@@ -151,12 +151,9 @@ processUpdate upd@Update{..} = do
         case upd of
           Update
             { message = Just Message { sticker = Just Sticker {sticker_file_id}}
-            } -> do
-                  liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
-                  liftIO $ putStrLn $ "[sticker] " ++ show upd
+            } -> liftIO $ putStrLn $ "sticker received: " ++ show sticker_file_id
           Update
-            { message = Just Message{}} ->
-            liftIO $ putStrLn $ "[msg] " ++ show upd
+            { message = Just Message{}} -> pure ()
           _ -> do
             let dbg = False
             when dbg $ liftIO $ putStrLn $ "-- ignored: revceived: " ++ show upd
