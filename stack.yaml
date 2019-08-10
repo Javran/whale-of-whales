@@ -1,8 +1,8 @@
-resolver: lts-13.20
+resolver: lts-14.0
 
 packages:
 - .
 
 extra-deps:
 - git: https://github.com/Javran/haskell-telegram-api.git
-  commit: d5a80a0d406bcae023fb48ad4204d8e72e546ad3
+  commit: 649480f5b414c24e08ae0159c925e8a097ec2d3b

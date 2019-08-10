@@ -47,7 +47,7 @@ liftTC m = do
   tok <- asks botToken
   lift (runReaderT m tok)
 
-runWowM :: forall a. WEnv -> WState -> Manager -> WowM a -> IO (Either ServantError a)
+runWowM :: forall a. WEnv -> WState -> Manager -> WowM a -> IO (Either ClientError a)
 runWowM we@WEnv {botToken = tok} ws mgr act =
     runClient mTC tok mgr
   where
@@ -62,7 +62,7 @@ runWowM we@WEnv {botToken = tok} ws mgr act =
   or is not responsible to be handled by ClientM monad.
  -}
 tryWithTag :: String -> WowM a -> WowM (Maybe a)
-tryWithTag tag m = catchError @ServantError (Just <$> m) $ \e -> do
+tryWithTag tag m = catchError @ClientError (Just <$> m) $ \e -> do
     logM $ "[" ++ tag ++ "] " ++ show e
     pure Nothing
 

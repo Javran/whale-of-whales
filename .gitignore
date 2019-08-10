@@ -24,3 +24,4 @@ cabal.project.local~
 wowz
 /private/
 /whale-of-whales.cabal
+/stack.yaml.lock
