@@ -15,6 +15,7 @@ import Data.Default.Class
 import qualified Data.Text as T
 import Data.Char
 import Data.Maybe
+import Control.Applicative
 
 import Javran.Wow.Types
 import Javran.Wow.Base
@@ -46,10 +47,16 @@ getBtxMsg raw = case readP_to_S btxMsgP (T.unpack raw) of
       eof
       pure ('他': fromMaybe [] m <> [b,c,d] <> ys)
 
+getStaticBtxMsg :: T.Text -> Maybe T.Text
+getStaticBtxMsg raw
+  | any (`T.isInfixOf` T.toLower raw) ["变态学博士", "btxbs"] = pure "他变态学博士"
+  | any (`T.isInfixOf` T.toLower raw) ["dzlst", "gzlst", "低质量色图", "高质量色图"] = pure raw
+  | otherwise = Nothing
+
 instance BotModule BianTaiXue where
     bmUpdFulfiller _ = UpdFulfiller $ \case
         Update { message = Just Message { chat = Chat {chat_id}, text = Just content} }
-          | Just respContent <- getBtxMsg content -> do
+          | Just respContent <- getBtxMsg content <|> getStaticBtxMsg content -> do
               roll <- genNextRM (0,99 :: Int)
               if roll < 80
                 then do
