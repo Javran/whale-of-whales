@@ -39,8 +39,15 @@ getBtxMsg raw = case readP_to_S btxMsgP (T.unpack raw) of
         u <- option [] $ (:[]) <$> oneOfChar "就救"
         v <- oneOfChar "是世"
         pure (Just $ u <> [v])
-      b <- oneOfChar "变變変"
-      c <- oneOfChar "态態"
+      [b,c] <- (
+        do
+          x0 <- oneOfChar "变變変"
+          x1 <- oneOfChar "态態"
+          pure [x0,x1]) <|> (
+        do
+          x0 <- oneOfChar "口"
+          x1 <- oneOfChar "嗨"
+          pure [x0,x1])
       d <- oneOfChar "学學"
       ys <- munch1 (not . isSpace)
       skipSpaces
@@ -50,6 +57,7 @@ getBtxMsg raw = case readP_to_S btxMsgP (T.unpack raw) of
 getStaticBtxMsg :: T.Text -> Maybe T.Text
 getStaticBtxMsg raw
   | any (`T.isInfixOf` T.toLower raw) ["变态学博士", "btxbs"] = pure "他变态学博士"
+  | any (`T.isInfixOf` T.toLower raw) ["口嗨学博士", "khxbs"] = pure "他口嗨学博士"
   | any (`T.isInfixOf` T.toLower raw) ["dzlst", "gzlst", "低质量色图", "高质量色图"] = pure raw
   | otherwise = Nothing
 
