@@ -26,7 +26,7 @@ instance BotModule Chiba where
                   let req = def { message_chat_id = ChatId chat_id
                                 , message_text =
                                     if "/" `T.isPrefixOf` content
-                                      then "它跟你发个吃吧"
+                                      then "它不跟你发个吃吧"
                                       else "它不跟你发个吃吧"
                                 }
                   in tryWithTag "Chiba" (liftTC $ sendMessageM req) >> pure True
