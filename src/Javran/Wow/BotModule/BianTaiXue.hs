@@ -34,6 +34,7 @@ getBtxMsg raw = case readP_to_S btxMsgP (T.unpack raw) of
     btxMsgP :: ReadP String
     btxMsgP = do
       skipSpaces
+      xz <- option "" (string "现在")
       _ <- char '我'
       m <- option Nothing $ do
         u <- option [] $ (:[]) <$> oneOfChar "就救"
@@ -47,17 +48,22 @@ getBtxMsg raw = case readP_to_S btxMsgP (T.unpack raw) of
         do
           x0 <- oneOfChar "口"
           x1 <- oneOfChar "嗨"
+          pure [x0,x1] ) <|> (
+        do
+          x0 <- oneOfChar "魔"
+          x1 <- oneOfChar "兽"
           pure [x0,x1])
-      d <- oneOfChar "学學"
+      d <- option Nothing (Just <$> oneOfChar "学學")
       ys <- munch1 (not . isSpace)
       skipSpaces
       eof
-      pure ('他': fromMaybe [] m <> [b,c,d] <> ys)
+      pure (xz <> ('他': fromMaybe [] m <> [b,c] <> maybe "" (:[]) d <> ys))
 
 getStaticBtxMsg :: T.Text -> Maybe T.Text
 getStaticBtxMsg raw
   | any (`T.isInfixOf` T.toLower raw) ["变态学博士", "btxbs"] = pure "他变态学博士"
   | any (`T.isInfixOf` T.toLower raw) ["口嗨学博士", "khxbs"] = pure "他口嗨学博士"
+  | any (`T.isInfixOf` T.toLower raw) ["魔兽博士", "msbs"] = pure "他魔兽博士"
   | any (`T.isInfixOf` T.toLower raw) ["dzlst", "gzlst", "低质量色图", "高质量色图"] = pure raw
   | otherwise = Nothing
 
